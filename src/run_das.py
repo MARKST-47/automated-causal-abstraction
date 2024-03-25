@@ -86,6 +86,9 @@ def main():
         raise argparse.ArgumentTypeError("Invalid model_path. Path does not exist.")
     
     os.makedirs(args.results_path, exist_ok=True)
+
+    save_dir_path = os.path.join(args.results_path, 'plots')
+    os.makedirs(save_dir_path, exist_ok=True)
     
     set_seed(args.seed)
     total_step = 0
@@ -112,7 +115,7 @@ def main():
             inputFunction=tokenizePrompt
         )
 
-        for low_rank_dimension in [64, 128, 256, 768]:
+        for low_rank_dimension in [64, 128, 256, 768, 4608]:
             for layer in range(model_config.n_layer):
 
                 intervenable_config = IntervenableConfig({
@@ -230,11 +233,7 @@ def main():
                     report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
 
-    save_dir_path = os.path.join(args.results_path, 'plots')
-    os.makedirs(save_dir_path, exist_ok=True)
-
-    for train_id, causal_model in arithmetic_family.causal_models.items():
-        for experiment_id in [64, 128, 256, 768]:
+        for experiment_id in [64, 128, 256, 768, 4608]:
             visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family)
 
 if __name__ =="__main__":

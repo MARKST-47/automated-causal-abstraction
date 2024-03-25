@@ -36,7 +36,18 @@ class CausalModelFamily(ABC): # abstract base class
         Return:
             The CausalModel or None if id is not found.
         """
-        return self.causal_models[id]
+        return self.causal_models[id]['causal_model']
+    
+    def get_label_by_id(self, id) -> str:
+        """Retrieve the label of the causal model form its family by its id.
+
+        Args:
+            id: The id of the label to retreive.
+
+        Return:
+            The label of the causal model.
+        """
+        return self.causal_models[id]['label']
     
     @abstractmethod
     def construct_default(self):

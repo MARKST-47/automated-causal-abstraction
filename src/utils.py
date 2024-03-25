@@ -48,12 +48,12 @@ def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id,
         plt.xlabel('layer')
         plt.ylabel('IIA')
 
-    plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {label}')
+    plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {arithmetic_family.get_label_by_id(train_id)}')
     plt.rcParams.update({'figure.autolayout': True})
     plt.legend()
     plt.tight_layout()
     
-    save_file_name = f'{label}_IIA_per_layer_targeting_[0,1,2,3,4,5]_{experiment_id}.png'
+    save_file_name = f'{train_id}_IIA_per_layer_targeting_[0,1,2,3,4,5]_{experiment_id}.png'
     file_path = os.path.join(save_dir_path, save_file_name)
     plt.savefig(file_path)
     plt.close()
