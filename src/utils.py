@@ -13,6 +13,12 @@ def arithmetic_input_sampler():
     C = randNum()
     return {"X":A, "Y":B, "Z":C}
 
+def redundancy_input_sampler():
+    A = randNum()
+    B = randNum()
+    C = randNum()
+    return {"X1":A, "X2":A, "X3":A, "Y":B, "Z":C}
+
 def save_results(results_path, report, layer, exp_id, train_id, test_id):
     file_name = f'{train_id}_report_layer_{layer}_tkn_{exp_id}.json'
     directory = os.path.join(results_path, f'results_{test_id}')
