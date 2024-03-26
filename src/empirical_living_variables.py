@@ -7,7 +7,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 import argparse
-from causal_models import SimpleArithmeticCausalModels
+from causal_models import SimpleSummingCausalModels
 from utils import arithmetic_input_sampler, save_results, visualize_simple_per_token
 
 from transformers import (GPT2Tokenizer,
@@ -69,11 +69,11 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
 
     # get different causal models
-    simple_arithmetic_family = SimpleArithmeticCausalModels()
+    simple_summing_family = SimpleSummingCausalModels()
 
     for low_rank_dimension in [32, 64, 128, 256]:
     
-        for id, model_info in simple_arithmetic_family.causal_models.items():
+        for id, model_info in simple_summing_family.causal_models.items():
 
             causal_model = model_info['causal_model']
 
@@ -147,7 +147,7 @@ def main():
                     save_results(args.results_path, report, layer, low_rank_dimension, token, id)
 
         for token in [0,1,2,3,4,5]:
-            visualize_simple_per_token(args.results_path, save_dir_path, model_config.n_layer, token, low_rank_dimension, simple_arithmetic_family)
+            visualize_simple_per_token(args.results_path, save_dir_path, model_config.n_layer, token, low_rank_dimension, simple_summing_family)
 
 if __name__ =="__main__":
     main()
