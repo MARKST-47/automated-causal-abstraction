@@ -80,11 +80,7 @@ class ArithmeticCausalModels(CausalModelFamily):
             "O":["P", "Z"]
         }
 
-        self.add_model(CausalModel(
-                    variables,
-                    values,
-                    parents,
-                    functions), label='(X+Y)+Z')
+        self.add_model(CausalModel(variables, values, parents, functions), label='(X+Y)+Z')
 
         parents = {
             "X":[], "Y":[], "Z":[], 
@@ -92,11 +88,7 @@ class ArithmeticCausalModels(CausalModelFamily):
             "O":["P", "Y"]
         }
         
-        self.add_model(CausalModel(
-                    variables,
-                    values,
-                    parents,
-                    functions), label="(X+Z)+Y")
+        self.add_model(CausalModel(variables, values, parents, functions), label="(X+Z)+Y")
 
         parents = {
             "X":[], "Y":[], "Z":[], 
@@ -104,8 +96,55 @@ class ArithmeticCausalModels(CausalModelFamily):
             "O":["P", "X"]
         }
         
-        self.add_model(CausalModel(
-                    variables,
-                    values,
-                    parents,
-                    functions), label="X+(Y+Z)")
+        self.add_model(CausalModel(variables, values, parents, functions), label="X+(Y+Z)")
+
+class SimpleArithmeticCausalModels(CausalModelFamily):
+    def __init__(self):
+        super().__init__()
+    
+    def construct_default(self):
+
+        variables =  ["X", "Y", "Z", "P", "O"]
+        number_of_entities = 20
+
+        reps = [randNum() for _ in range(number_of_entities)]
+        values = {variable:reps for variable in ["X", "Y", "Z"]}
+        values["P"] = list(range(1,11)) # can possibly take values from 1 to 10
+        values["O"] = list(range(3, 31))
+
+        def FILLER():
+            return reps[0]
+
+        functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
+                    "P": lambda x: x,
+                    "O": lambda x, y, z: x + y + z}
+        
+        parents = {
+            "X":[], "Y":[], "Z":[],
+            "P":["X"],
+            "O":["P", "Y", "Z"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions), label="(X)+Y+Z")
+
+        parents = {
+            "X":[], "Y":[], "Z":[],
+            "P":["Y"],
+            "O":["X", "P", "Z"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions), label="X+(Y)+Z")
+
+        parents = {
+            "X":[], "Y":[], "Z":[],
+            "P":["Z"],
+            "O":["X", "Y", "P"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions), label="X+Y+(Z)")
+
+        
+        
+        
+        
+
