@@ -98,7 +98,7 @@ class ArithmeticCausalModels(CausalModelFamily):
         
         self.add_model(CausalModel(variables, values, parents, functions), label="X+(Y+Z)")
 
-class SimpleArithmeticCausalModels(CausalModelFamily):
+class SimpleSummingCausalModels(CausalModelFamily):
     def __init__(self):
         super().__init__()
     
@@ -143,8 +143,36 @@ class SimpleArithmeticCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions), label="X+Y+(Z)")
 
-        
-        
-        
-        
+class RedundantSummingCausalModels(CausalModelFamily):
+    def __init__(self):
+        super().__init__()
+    
+    def construct_default(self):
 
+        variables =  ["X1", "X2", "X3", "Y", "Z", "P", "Q", "O"]
+        number_of_entities = 20
+
+        reps = [randNum() for _ in range(number_of_entities)]
+        values = {variable:reps for variable in ["X1", "Y", "Z"]}
+        values["X2"] = values["X1"]
+        values["X3"] = values["X2"]
+        values["P"] = list(range(1,11)) # can possibly take values from 1 to 10
+        values["Q"] = list(range(2, 21))
+        values["O"] = list(range(3, 31))
+
+        def FILLER():
+            return reps[0]
+
+        functions = {"X1":FILLER, "X2":FILLER, "X3":FILLER, "Y":FILLER, "Z":FILLER,
+                    "P": lambda x, y, z: x,
+                    "Q": lambda x, y: x + y,
+                    "O": lambda x, y: x + y}
+        
+        parents = {
+            "X1":[], "X2":[], "X3":[], "Y":[], "Z":[],
+            "P":["X1", "X2", "X3"],
+            "Q": ["Y", "Z"],
+            "O":["P", "Q"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions), label="(X+X-X)+Y+Z")
