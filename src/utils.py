@@ -57,3 +57,39 @@ def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id,
     file_path = os.path.join(save_dir_path, save_file_name)
     plt.savefig(file_path)
     plt.close()
+
+def visualize_simple_per_token(results_path, save_dir_path, n_layers, token, subspace, causal_model_family):
+            
+    for test_id, model_info in causal_model_family.causal_models.items():
+        
+        label = model_info['label']
+
+        cm = []
+        report_dicts = []
+
+        for layer in range(n_layers):
+            file_name = f'{token}_report_layer_{layer}_tkn_{subspace}.json'
+            directory = os.path.join(results_path, f'results_{test_id}')
+            file_path = os.path.join(directory, file_name)
+            with open(file_path, 'r') as json_file:
+                report_dict = json.load(json_file)
+                report_dicts.append(report_dict)
+
+        for layer, report_dict in enumerate(report_dicts, start=1):
+            cm.append(report_dict['accuracy'])
+        
+        plt.scatter(range(n_layers), cm)
+        plt.plot(range(n_layers), cm, label=label)
+        plt.xticks(range(int(min(plt.xticks()[0])), int(max(plt.xticks()[0])) + 1))
+        plt.xlabel('layer')
+        plt.ylabel('IIA')
+
+    plt.title(f'IIA when targeting token {token}, {subspace}, trained on {causal_model_family.get_label_by_id(test_id)}')
+    plt.rcParams.update({'figure.autolayout': True})
+    plt.legend()
+    plt.tight_layout()
+    
+    save_file_name = f'{token}_targeted_IIA_per_layer_{subspace}.png'
+    file_path = os.path.join(save_dir_path, save_file_name)
+    plt.savefig(file_path)
+    plt.close()
