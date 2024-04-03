@@ -2,6 +2,8 @@ import random
 import json
 import os
 import matplotlib.pyplot as plt
+import networkx as nx
+from matplotlib.cm import ScalarMappable
 
 def randNum(lower=1, upper=10):
     number = random.randint(lower, upper)
@@ -98,4 +100,33 @@ def visualize_simple_per_token(results_path, save_dir_path, n_layers, token, sub
     save_file_name = f'{token}_targeted_IIA_per_layer_{subspace}.png'
     file_path = os.path.join(save_dir_path, save_file_name)
     plt.savefig(file_path)
+    plt.close()
+
+def visualize_graph(graph_encoding, label):
+    G = nx.from_numpy_matrix(graph_encoding.numpy(), create_using=nx.DiGraph)
+
+    edge_weights = [(u, v, d['weight']) for u, v, d in G.edges(data=True) if d['weight'] > 0]
+    edge_colors = [d['weight'] for u, v, d in G.edges(data=True) if d['weight'] > 0]
+
+    cmap = plt.cm.get_cmap('viridis')
+    norm = plt.Normalize(min(edge_colors), max(edge_colors))
+    sm = ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+
+    edge_labels = {(u, v): d['weight'] for u, v, d in G.edges(data=True)}
+
+    pos = nx.spring_layout(G)
+    nx.draw_networkx(G, pos,
+                    node_color='lightblue',
+                    with_labels=True,
+                    edgelist=edge_weights,
+                    edge_color=edge_colors,
+                    width=2,
+                    edge_cmap=cmap)
+    
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+    plt.colorbar(sm, ticks=range(1, 4), label='Different Models encodings') 
+    plt.title(f'Graph constructed based on data generated from {label}')
+    plt.savefig(f'directed_graph_{label}.png')
     plt.close()
