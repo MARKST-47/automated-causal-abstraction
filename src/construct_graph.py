@@ -11,17 +11,21 @@ from pyvene import count_parameters, set_seed
 import argparse
 from causal_models import ArithmeticCausalModels
 import numpy as np
-from utils import arithmetic_input_sampler, save_results,visualize_per_trained_model
+from utils import arithmetic_input_sampler, visualize_graph
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-from pyvene import (
-    IntervenableModel,
-    IntervenableConfig,
-    LowRankRotatedSpaceIntervention
-)
+# from pyvene import (
+#     IntervenableModel,
+#     IntervenableConfig,
+#     LowRankRotatedSpaceIntervention
+# )
+
+from my_pyvene.models.intervenable_base import IntervenableModel
+from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
+from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -113,31 +117,31 @@ def main():
             args.batch_size,
             device="cuda:0",
             sampler=arithmetic_input_sampler,
-            input_function=tokenizePrompt
+            inputFunction=tokenizePrompt
         )
-
+            
         graph_encoding = torch.zeros(args.n_training, args.n_training)
+
+        layer = 0
+        low_rank_dimension = 64
+
+        intervenable_config = IntervenableConfig({
+                "layer": layer,
+                "component": "block_output",
+                "low_rank_dimension": low_rank_dimension,
+                "unit":"pos",
+                "max_number_of_units": 6
+            },
+            intervention_types=LowRankRotatedSpaceIntervention,
+            model_type=type(model)
+        )
 
         for i, x in enumerate(training_counterfactual_data):
             for j, y in enumerate(training_counterfactual_data):
                 if x == y:
                     continue
 
-                data = np.array([x,y])
-            
-                layer = 0
-                low_rank_dimension = 64
-
-                intervenable_config = IntervenableConfig({
-                        "layer": layer,
-                        "component": "block_output",
-                        "low_rank_dimension": low_rank_dimension,
-                        "unit":"pos",
-                        "max_number_of_units": 6
-                    },
-                    intervention_types=LowRankRotatedSpaceIntervention,
-                    model_type=type(model)
-                )
+                train_data = np.array([x,y])
 
                 intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
                 intervenable.set_device("cuda")
@@ -156,13 +160,14 @@ def main():
                 print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
                 train_iterator = trange(0, int(args.epochs), desc="Epoch")
 
+                # training with two examples
                 for epoch in train_iterator:
                     torch.cuda.empty_cache()
                     epoch_iterator = tqdm(
                         DataLoader(
-                            data,
+                            train_data,
                             batch_size=args.batch_size,
-                            sampler=batched_random_sampler(data, args.batch_size),
+                            sampler=batched_random_sampler(train_data, args.batch_size),
                         ),
                         desc=f"Epoch: {epoch}",
                         position=0,
@@ -206,77 +211,52 @@ def main():
                 # generate testing counterfactual data
                 print('testing...')
 
-                test_data = data
+                best_model = 0
+                best_acc = 0
 
-                eval_labels = []
-                eval_preds = []
-                with torch.no_grad():
-                    epoch_iterator = tqdm(DataLoader(test_data, args.batch_size), desc=f"Test")
-                    for step, inputs in enumerate(epoch_iterator):
-                        for k, v in inputs.items():
-                            if v is not None and isinstance(v, torch.Tensor):
-                                inputs[k] = v.to("cuda")
+                for test_id, test_model_info in arithmetic_family.causal_models.items():
 
-                        inputs["input_ids"] = inputs["input_ids"].squeeze()
-                        inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-                        b_s = inputs["input_ids"].shape[0]
-                        _, counterfactual_outputs = intervenable(
-                            {"input_ids": inputs["input_ids"]},
-                            [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                            {"sources->base": [0,1,2,3,4,5]},
-                            subspaces=[
-                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size
-                            ]
-                        )
+                    testing_counterfactual_data = test_model_info['causal_model'].generate_counterfactual_dataset(
+                        args.n_testing,
+                        intervention_id,
+                        args.batch_size,
+                        device="cuda:0",
+                        sampler=arithmetic_input_sampler,
+                        inputFunction=tokenizePrompt
+                    )
 
-                        eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
-                        eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-                report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
-                print(report['accuracy'])
+                    eval_labels = []
+                    eval_preds = []
+                    with torch.no_grad():
+                        epoch_iterator = tqdm(DataLoader(testing_counterfactual_data, args.batch_size), desc=f"Test")
+                        for step, inputs in enumerate(epoch_iterator):
+                            for k, v in inputs.items():
+                                if v is not None and isinstance(v, torch.Tensor):
+                                    inputs[k] = v.to("cuda")
 
-            #     for test_id, test_model_info in arithmetic_family.causal_models.items():
+                            inputs["input_ids"] = inputs["input_ids"].squeeze()
+                            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+                            b_s = inputs["input_ids"].shape[0]
+                            _, counterfactual_outputs = intervenable(
+                                {"input_ids": inputs["input_ids"]},
+                                [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                                {"sources->base": [0,1,2,3,4,5]},
+                                subspaces=[
+                                    [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                                ]
+                            )
 
-            #         testing_counterfactual_data = test_model_info['causal_model'].generate_counterfactual_dataset(
-            #             args.n_testing,
-            #             intervention_id,
-            #             args.batch_size,
-            #             device="cuda:0",
-            #             sampler=arithmetic_input_sampler,
-            #             input_function=tokenizePrompt
-            #         )
+                            eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+                            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+                    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+                    if best_acc < report["accuracy"]:
+                        best_model = test_id
+                        best_acc = report["accuracy"]
 
-            #         test_data = np.array(testing_counterfactual_data)
+                graph_encoding[i][j] = best_model
 
-            #         eval_labels = []
-            #         eval_preds = []
-            #         with torch.no_grad():
-            #             epoch_iterator = tqdm(DataLoader(test_data, args.batch_size), desc=f"Test")
-            #             for step, inputs in enumerate(epoch_iterator):
-            #                 for k, v in inputs.items():
-            #                     if v is not None and isinstance(v, torch.Tensor):
-            #                         inputs[k] = v.to("cuda")
-
-            #                 inputs["input_ids"] = inputs["input_ids"].squeeze()
-            #                 inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-            #                 b_s = inputs["input_ids"].shape[0]
-            #                 _, counterfactual_outputs = intervenable(
-            #                     {"input_ids": inputs["input_ids"]},
-            #                     [{"input_ids": inputs["source_input_ids"][:, 0]}],
-            #                     {"sources->base": [0,1,2,3,4,5]},
-            #                     subspaces=[
-            #                         [[_ for _ in range(low_rank_dimension)]] * args.batch_size
-            #                     ]
-            #                 )
-
-            #                 eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
-            #                 eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-            #         report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
-            #         print(report['accuracy'])
-            #         break
-            #     break
-            # break
-        break
-                    # save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
+        label = model_info['label']
+        visualize_graph(graph_encoding, label)
 
 if __name__ =="__main__":
     main()
