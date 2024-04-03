@@ -23,6 +23,7 @@ from transformers import (GPT2Tokenizer,
 #     LowRankRotatedSpaceIntervention
 # )
 
+# temporary import
 from my_pyvene.models.intervenable_base import IntervenableModel
 from my_pyvene.models.configuration_intervenable_model import IntervenableConfig
 from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
