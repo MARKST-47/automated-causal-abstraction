@@ -102,7 +102,7 @@ def visualize_simple_per_token(results_path, save_dir_path, n_layers, token, sub
     plt.savefig(file_path)
     plt.close()
 
-def visualize_graph(graph_encoding, label):
+def visualize_graph(graph_encoding, label=''):
     G = nx.from_numpy_matrix(graph_encoding.numpy(), create_using=nx.DiGraph)
 
     edge_weights = [(u, v, d['weight']) for u, v, d in G.edges(data=True) if d['weight'] > 0]
@@ -127,6 +127,6 @@ def visualize_graph(graph_encoding, label):
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
 
     plt.colorbar(sm, ticks=range(1, 4), label='Different Models encodings') 
-    plt.title(f'Graph constructed based on data generated from {label}')
+    plt.title(f'Datapoints and their edges')
     plt.savefig(f'directed_graph_{label}.png')
     plt.close()
