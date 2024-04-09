@@ -108,6 +108,9 @@ def visualize_graph(graph_encoding, label=''):
     edge_weights = [(u, v, d['weight']) for u, v, d in G.edges(data=True) if d['weight'] > 0]
     edge_colors = [d['weight'] for u, v, d in G.edges(data=True) if d['weight'] > 0]
 
+    if edge_colors == []:
+        edge_colors = [0]
+
     cmap = plt.cm.get_cmap('viridis')
     norm = plt.Normalize(min(edge_colors), max(edge_colors))
     sm = ScalarMappable(cmap=cmap, norm=norm)

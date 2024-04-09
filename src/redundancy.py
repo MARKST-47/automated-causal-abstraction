@@ -16,12 +16,18 @@ from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-from pyvene import (
-    IntervenableModel,
-    IntervenableConfig,
-    LowRankRotatedSpaceIntervention,
-    RotatedSpaceIntervention
-)
+# Temporary fix
+from my_pyvene.models.intervenable_base import IntervenableModel
+from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
+from my_pyvene.models.interventions import RotatedSpaceIntervention
+
+# from pyvene import (
+#     IntervenableModel,
+#     IntervenableConfig,
+#     LowRankRotatedSpaceIntervention,
+#     RotatedSpaceIntervention,
+#     RepresentationConfig
+# )
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -123,15 +129,23 @@ def main():
         for low_rank_dimension in [64, 128, 256, 768, 4608]:
             for layer in range(model_config.n_layer):
 
-                intervenable_config = IntervenableConfig({
-                        "layer": layer,
-                        "component": "block_output",
-                        # "low_rank_dimension": low_rank_dimension,
-                        "unit":"pos",
-                        "max_number_of_units": 6
-                    },
+                intervenable_config = IntervenableConfig(
+                    model_type=type(model),
+                    representations=[
+                        RepresentationConfig(
+                            layer,  # layer
+                            "block_output",  # intervention type
+                            "pos",  # intervention unit is now aligne with tokens
+                            5,  # max number of unit
+                        ),
+                        RepresentationConfig(
+                            layer,  # layer
+                            "block_output",  # intervention type
+                            "pos",  # intervention unit is now aligne with tokens
+                            3,  # max number of unit
+                        ),
+                    ],
                     intervention_types=RotatedSpaceIntervention,
-                    model_type=type(model)
                 )
 
                 intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
@@ -180,10 +194,7 @@ def main():
                                     {"input_ids": inputs["source_input_ids"][:, 1]}
                                 ],
                                 {
-                                    "sources->base": (
-                                        [0,1,2,3,4,5],
-                                        [0,1,2,3,4,5]
-                                    )
+                                    "sources->base": ([0, 1, 2, 3, 4], [6, 7, 8])
                                 },
                                 subspaces=[
                                     [[_ for _ in range(0, low_rank_dimension)]] * args.batch_size,
@@ -199,10 +210,7 @@ def main():
                                     {"input_ids": inputs["source_input_ids"][:, 1]}
                                 ],
                                 {
-                                    "sources->base": (
-                                        [0,1,2,3,4,5],
-                                        None
-                                    )
+                                    "sources->base": ([0, 1, 2, 3, 4], None)
                                 },
                                 subspaces=[
                                     [[_ for _ in range(0, low_rank_dimension)]] * args.batch_size,
@@ -217,10 +225,7 @@ def main():
                                     {"input_ids": inputs["source_input_ids"][:, 1]}
                                 ],
                                 {
-                                    "sources->base": (
-                                        None,
-                                        [0,1,2,3,4,5]
-                                    )
+                                    "sources->base": (None, [6, 7, 8])
                                 },
                                 subspaces=[
                                     None,
@@ -280,10 +285,7 @@ def main():
                                         {"input_ids": inputs["source_input_ids"][:, 1]}
                                     ],
                                     {
-                                        "sources->base": (
-                                            [0,1,2,3,4,5],
-                                            [0,1,2,3,4,5]
-                                        )
+                                        "sources->base": ([0, 1, 2, 3, 4], [6, 7, 8])
                                     },
                                     subspaces=[
                                         [[_ for _ in range(0, low_rank_dimension)]] * args.batch_size,
@@ -299,10 +301,7 @@ def main():
                                         {"input_ids": inputs["source_input_ids"][:, 1]}
                                     ],
                                     {
-                                        "sources->base": (
-                                            [0,1,2,3,4,5],
-                                            None
-                                        )
+                                        "sources->base": ([0, 1, 2, 3, 4], None)
                                     },
                                     subspaces=[
                                         [[_ for _ in range(0, low_rank_dimension)]] * args.batch_size,
@@ -317,10 +316,7 @@ def main():
                                         {"input_ids": inputs["source_input_ids"][:, 1]}
                                     ],
                                     {
-                                        "sources->base": (
-                                            None,
-                                            [0,1,2,3,4,5]
-                                        )
+                                        "sources->base": (None, [6, 7, 8])
                                     },
                                     subspaces=[
                                         None,
