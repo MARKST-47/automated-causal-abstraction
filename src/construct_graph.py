@@ -11,7 +11,7 @@ from pyvene import count_parameters, set_seed
 import argparse
 from causal_models import ArithmeticCausalModels
 import numpy as np
-from utils import arithmetic_input_sampler, visualize_graph
+from utils import arithmetic_input_sampler, visualize_connected_components
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
@@ -108,32 +108,32 @@ def main():
 
     arithmetic_family = ArithmeticCausalModels()
     bases = []
+    testing_bases = []
 
-    # for _ in range(args.n_training):
-    #         bases.append(arithmetic_input_sampler())
-
-    # test_bases = []
+    for _ in range(args.n_training):
+            bases.append(arithmetic_input_sampler())
+    
     # for _ in range(args.n_testing):
-    #     test_bases.append(arithmetic_input_sampler())
+    #         testing_bases.append(arithmetic_input_sampler())
+
+    testing_bases = random.sample(bases, args.n_testing)
 
     M = []
 
-    for _ in range(20):
-
-        bases = []
-        for _ in range(args.n_training):
-            bases.append(arithmetic_input_sampler())
-
-        # test_bases = []
-        # for _ in range(args.n_testing):
-        #     test_bases.append(arithmetic_input_sampler())
+    # number of runs to average over
+    for _ in range(1):
 
         model_accs = {}
         
+        # loop through the family of causal models
         for cm_id, model_info in arithmetic_family.causal_models.items():
+
+            # initiate graph weighted by accuracies
+            graph_encoding = torch.zeros(args.n_testing, args.n_testing)
 
             print('generating data for DAS...')
 
+            # generate counterfactual data
             training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
                 args.n_training,
                 intervention_id,
@@ -144,18 +144,7 @@ def main():
                 inputFunction=tokenizePrompt
             )
 
-            # testing_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
-            #     args.n_testing,
-            #     intervention_id,
-            #     args.batch_size,
-            #     test_bases,
-            #     device="cuda:0",
-            #     sampler=arithmetic_input_sampler,
-            #     inputFunction=tokenizePrompt
-            # )
-                
-            graph_encoding = torch.zeros(args.n_training, args.n_training)
-
+            # training intervenable model
             layer = 0
             low_rank_dimension = 64
 
@@ -170,50 +159,129 @@ def main():
                 model_type=type(model)
             )
 
-            for i, x in enumerate(training_counterfactual_data):
-                for j, y in enumerate(training_counterfactual_data):
+            intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
+            intervenable.set_device("cuda")
+            intervenable.disable_model_gradients()
+
+            optimizer_params = []
+            for k, v in intervenable.interventions.items():
+                optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+
+            optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
+
+            print('DAS training...')
+
+            intervenable.model.train()
+            print("intervention trainable parameters: ", intervenable.count_parameters())
+            print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
+            train_iterator = trange(0, int(args.epochs), desc="Epoch")
+
+            # training with two examples
+            for epoch in train_iterator:
+                torch.cuda.empty_cache()
+                epoch_iterator = tqdm(
+                    DataLoader(
+                        training_counterfactual_data,
+                        batch_size=args.batch_size,
+                        sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
+                    ),
+                    desc=f"Epoch: {epoch}",
+                    position=0,
+                    leave=True,
+                )
+                
+                for step, inputs in enumerate(epoch_iterator):
+                    for k, v in inputs.items():
+                        if v is not None and isinstance(v, torch.Tensor):
+                            inputs[k] = v.to("cuda")
+                    inputs["input_ids"] = inputs["input_ids"].squeeze()
+                    inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+                    b_s = inputs["input_ids"].shape[0]
+                    _, counterfactual_outputs = intervenable(
+                        {"input_ids": inputs["input_ids"]},
+                        [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                        {"sources->base": [0,1,2,3,4,5]},
+                        subspaces=[
+                            [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
+                        ]
+                    )
+
+                    eval_metrics = compute_metrics(
+                        counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze() - min_class_value
+                    )
+
+                    # loss and backprop
+                    loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"] - min_class_value)
+                    loss_str = round(loss.item(), 2)
+                    epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
+
+                    if args.gradient_accumulation_steps > 1:
+                        loss = loss / args.gradient_accumulation_steps
+                    loss.backward()
+
+                    if total_step % args.gradient_accumulation_steps == 0:
+                        optimizer.step()
+                        intervenable.set_zero_grad()
+                    total_step += 1
+
+            # eval on all data
+            eval_labels = []
+            eval_preds = []
+            with torch.no_grad():
+                epoch_iterator = tqdm(DataLoader(training_counterfactual_data, args.batch_size), desc=f"Test")
+                for step, inputs in enumerate(epoch_iterator):
+                    for k, v in inputs.items():
+                        if v is not None and isinstance(v, torch.Tensor):
+                            inputs[k] = v.to("cuda")
+
+                    inputs["input_ids"] = inputs["input_ids"].squeeze()
+                    inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+                    b_s = inputs["input_ids"].shape[0]
+                    _, counterfactual_outputs = intervenable(
+                        {"input_ids": inputs["input_ids"]},
+                        [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                        {"sources->base": [0,1,2,3,4,5]},
+                        subspaces=[
+                            [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                        ]
+                    )
+
+                    eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+                    eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+            report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+            print(f"Accuracy when evaluating on the entire data: {report['accuracy']}")
+
+
+            # generate counterfactual data
+            testing_batch_size = 2
+            testing_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
+                args.n_testing,
+                intervention_id,
+                testing_batch_size, # batch size when testing
+                testing_bases,
+                device="cuda:0",
+                sampler=arithmetic_input_sampler,
+                inputFunction=tokenizePrompt
+            )
+
+            # evaluate per pair of data in training data
+            for i, x in enumerate(testing_counterfactual_data):
+                for j, y in enumerate(testing_counterfactual_data):
 
                     if i == j:
                         continue
 
-                    train_data = np.array([x,y])
+                    eval_data = np.array([x,y])
 
-                    intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
-                    intervenable.set_device("cuda")
-                    intervenable.disable_model_gradients()
-
-                    optimizer_params = []
-                    for k, v in intervenable.interventions.items():
-                        optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
-
-                    optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
-
-                    print('DAS training...')
-
-                    intervenable.model.train()
-                    print("intervention trainable parameters: ", intervenable.count_parameters())
-                    print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
-                    train_iterator = trange(0, int(args.epochs), desc="Epoch")
-
-                    best_acc = 0
-                    # training with two examples
-                    for epoch in train_iterator:
-                        torch.cuda.empty_cache()
-                        epoch_iterator = tqdm(
-                            DataLoader(
-                                train_data,
-                                batch_size=args.batch_size,
-                                sampler=batched_random_sampler(train_data, args.batch_size),
-                            ),
-                            desc=f"Epoch: {epoch}",
-                            position=0,
-                            leave=True,
-                        )
-                        
+                    eval_labels = []
+                    eval_preds = []
+                    with torch.no_grad():
+                        epoch_iterator = tqdm(DataLoader(eval_data, testing_batch_size), desc=f"Test")
                         for step, inputs in enumerate(epoch_iterator):
                             for k, v in inputs.items():
                                 if v is not None and isinstance(v, torch.Tensor):
                                     inputs[k] = v.to("cuda")
+
                             inputs["input_ids"] = inputs["input_ids"].squeeze()
                             inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
                             b_s = inputs["input_ids"].shape[0]
@@ -222,59 +290,21 @@ def main():
                                 [{"input_ids": inputs["source_input_ids"][:, 0]}],
                                 {"sources->base": [0,1,2,3,4,5]},
                                 subspaces=[
-                                    [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
+                                    [[_ for _ in range(low_rank_dimension)]] * testing_batch_size
                                 ]
                             )
 
-                            eval_metrics = compute_metrics(
-                                counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze() - min_class_value
-                            )
+                            eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+                            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+                    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+                    graph_encoding[i][j] = report['accuracy']
 
-                            # loss and backprop
-                            loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"] - min_class_value)
-                            loss_str = round(loss.item(), 2)
-                            epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
-
-                            if args.gradient_accumulation_steps > 1:
-                                loss = loss / args.gradient_accumulation_steps
-                            loss.backward()
-
-                            if total_step % args.gradient_accumulation_steps == 0:
-                                optimizer.step()
-                                intervenable.set_zero_grad()
-                            total_step += 1
-
-                            if eval_metrics['accuracy'] > best_acc:
-                                best_acc = eval_metrics['accuracy']
-
-                    graph_encoding[i][j] = best_acc
-
-                    # eval_labels = []
-                    # eval_preds = []
-                    # with torch.no_grad():
-                    #     epoch_iterator = tqdm(DataLoader(testing_counterfactual_data, args.batch_size), desc=f"Test")
-                    #     for step, inputs in enumerate(epoch_iterator):
-                    #         for k, v in inputs.items():
-                    #             if v is not None and isinstance(v, torch.Tensor):
-                    #                 inputs[k] = v.to("cuda")
-
-                    #         inputs["input_ids"] = inputs["input_ids"].squeeze()
-                    #         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-                    #         b_s = inputs["input_ids"].shape[0]
-                    #         _, counterfactual_outputs = intervenable(
-                    #             {"input_ids": inputs["input_ids"]},
-                    #             [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                    #             {"sources->base": [0,1,2,3,4,5]},
-                    #             subspaces=[
-                    #                 [[_ for _ in range(low_rank_dimension)]] * args.batch_size
-                    #             ]
-                    #         )
-
-                    #         eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
-                    #         eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-                    # report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
-                    # graph_encoding[i][j] = report['accuracy']
-
+                    # newly added to obtain an undirected graph
+                    if graph_encoding[i][j] > graph_encoding[j][i]:
+                        graph_encoding[j][i] = graph_encoding[i][j]
+                    else:
+                        graph_encoding[i][j] = graph_encoding[j][i]
+            
             model_accs[cm_id] = graph_encoding
         M.append(model_accs)
 
@@ -291,44 +321,15 @@ def main():
         model_accs[cm_id] = average_tensor
         final_vars[cm_id] = variance_tensor
     
-    print("The input data used:")
-    print()
-    print(bases)
     print()
     print(model_accs)
     print()
-    print(final_vars)
+    # print(final_vars)
 
-    graph_1 = torch.zeros(args.n_training, args.n_training)
-    graph_2 = torch.zeros(args.n_training, args.n_training)
-    graph = torch.zeros(args.n_training, args.n_training)
+    graph = torch.zeros(args.n_testing, args.n_testing)
 
-    for i in range(args.n_training):
-        for j in range(args.n_training):
-            if i > j:
-                best_acc = 0
-                best_model = 0
-                for id, cm_accs in model_accs.items():
-
-                    if cm_accs[i][j] > best_acc:
-                        best_acc = cm_accs[i][j]
-                        best_model = id
-
-                graph_1[i][j] = best_model
-            
-            if i < j:
-                best_acc = 0
-                best_model = 0
-                for id, cm_accs in model_accs.items():
-
-                    if cm_accs[i][j] > best_acc:
-                        best_acc = cm_accs[i][j]
-                        best_model = id
-
-                graph_2[i][j] = best_model
-
-    for i in range(args.n_training):
-        for j in range(args.n_training):
+    for i in range(args.n_testing):
+        for j in range(args.n_testing):
                 best_acc = 0
                 best_model = 0
                 for id, cm_accs in model_accs.items():
@@ -340,15 +341,7 @@ def main():
                 graph[i][j] = best_model
 
     print(graph)
-
-    label = 'lower_triangle'
-    visualize_graph(graph_1, label)
-
-    label = 'upper_triangle'
-    visualize_graph(graph_2, label)
-
-    label = 'symmetric'
-    visualize_graph(graph, label)
+    visualize_connected_components(graph, arithmetic_family)
 
 if __name__ =="__main__":
     main()
