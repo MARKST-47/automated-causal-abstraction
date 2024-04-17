@@ -173,56 +173,59 @@ def visualize_connected_components(matrix, causal_model_family):
     for i in range(matrix.shape[0]):
         G.add_node(i)
 
-    # Add edges based on matrix values
+    # undirected graph edge-label construction
     for i in range(matrix.shape[0]):
         for j in range(i+1, matrix.shape[0]):
             if matrix[i, j] != 0:
-                G.add_edge(i, j, label=matrix[i, j].item())  # Weight represents the label
+                G.add_edge(i, j, label=matrix[i, j].item()) # label means the causal model
 
-    pos = nx.spring_layout(G, k=0.1, iterations=100)  # Adjust parameters for better layout
+    # saving the graph with all nodes
+    pos = nx.spring_layout(G, k=0.1, iterations=100)
     color_map = {1: 'red', 2: 'green', 3: 'blue'}
     edge_colors = [color_map[w['label']] for (u, v, w) in G.edges(data=True)]
 
-    nx.draw_networkx_nodes(G, pos, node_size=30, node_color='lightblue', alpha=0.7)  # Reduce node opacity
-    nx.draw_networkx_edges(G, pos, width=1.5, edge_color=edge_colors, alpha=0.7)  # Reduce edge opacity
-
-    # Optionally add labels (can be slow)
+    nx.draw_networkx_nodes(G, pos, node_size=30, node_color='lightblue', alpha=0.7)
+    nx.draw_networkx_edges(G, pos, width=1.5, edge_color=edge_colors, alpha=0.7)
     nx.draw_networkx_labels(G, pos, font_size=8)
     plt.savefig(f'graph.png')
     plt.close()
 
+    # construct subgraphs based on label
     subgraphs = {}
     for label in set(nx.get_edge_attributes(G, 'label').values()):
         subgraph = nx.Graph()
+
         for u, v, data in G.edges(data=True):
             if data['label'] == label:
+
                 if u not in subgraph.nodes(): 
                     subgraph.add_node(u)
                 if v not in subgraph.nodes():
                     subgraph.add_node(v)
 
-                # Add edge (if it doesn't exist)
                 if not subgraph.has_edge(u, v):
                     subgraph.add_edge(u, v, label=label)
+
         subgraphs[causal_model_family.get_label_by_id(label)] = subgraph
 
+    # find optimal positions for each subgraph
     positions = {}
     for label, subgraph in subgraphs.items():
+        # spring layout is an algorithm for showing the graph in a pretty way
         positions[label] = nx.spring_layout(subgraph, k=0.3, iterations=50)
 
     num_subgraphs = len(subgraphs.keys())
-    fig, axes = plt.subplots(nrows=1, ncols=num_subgraphs, figsize=(12, 5))  # Adjust figsize
+    fig, axes = plt.subplots(nrows=1, ncols=num_subgraphs, figsize=(12, 5))
 
     color_map = {1: 'red', 2: 'green', 3: 'blue'}
 
-    i = 0
+    i = 0 # axes id
     for label, subgraph in subgraphs.items():
 
         cliques = list(nx.find_cliques(subgraph))
-
         pos = positions[label]
 
-        # visualizing the graph
+        # visualizing the subgraph
         nx.draw_networkx(
             subgraph, 
             pos=pos, 
@@ -231,29 +234,25 @@ def visualize_connected_components(matrix, causal_model_family):
             edge_color=[color_map[subgraph[u][v]['label']] for u, v in subgraph.edges()],
             with_labels=True, 
             font_size=8,
-            ax=axes[i]  # Draw onto different subplot axes
+            ax=axes[i]
         )
 
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-        # Highlight cliques with different colors
+        # highlight cliques with these colors
+        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k'] # len is 7
+        
         for j, clique in enumerate(cliques):
-            nx.draw_networkx_nodes(subgraph, pos, nodelist=clique, 
-                                node_color=colors[j % len(colors)], ax=axes[i])
+            nx.draw_networkx_nodes(
+                subgraph,
+                pos,
+                nodelist=clique, 
+                node_color=colors[j % len(colors)], # so we kinda have different colors
+                ax=axes[i]
+            )
 
         axes[i].axis('off')
-        axes[i].set_title(f"Connected Component: Label {label}")  # Get label
+        axes[i].set_title(f"All connected edges with label {label}")
         i += 1
 
     plt.tight_layout()
     plt.savefig(f'connected_component_visualization.png')
     plt.close()
-
-# for next time:
-#   retrain with the new pseudocode 
-#   better visualization of graphs
-#   find connected components https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.connected_components.html
-#   note: try this pipeline for at least one version of labelling
-#   finding the maximal cliques: https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.clique.find_cliques.html
-#   converting networkxx into latex?
-#   ask tom about the book on graphs (more graph properties)
-#   evaluation: forcing a graph on a partition of data and checking from there (pseudocode for that maybe as well)
