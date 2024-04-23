@@ -1,4 +1,4 @@
-# LLM Alignment with Causal Models
+# Disentangling Causal Models with DAS
 Master Thesis - Discovering Causal Models which Align with LLMs Using Distributed Alignment Search (DAS)
 
 ## Sanity Check Experiment
