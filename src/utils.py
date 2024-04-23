@@ -98,6 +98,38 @@ def visualize_per_model(results_path, save_dir_path, n_layers, train_id, experim
     plt.savefig(file_path)
     plt.close()
 
+def visualize_model_all_tokens(results_path, save_dir_path, n_layers, train_id, label):
+
+    for token in [0,1,2,3,4,5]:
+        cm = []
+        report_dicts = []
+        for layer in range(n_layers):
+            file_name = f'{train_id}_report_layer_{layer}_tkn_{token}.json'
+            directory = os.path.join(results_path, f'results_{train_id}')
+            file_path = os.path.join(directory, file_name)
+            with open(file_path, 'r') as json_file:
+                report_dict = json.load(json_file)
+                report_dicts.append(report_dict)
+
+        for layer, report_dict in enumerate(report_dicts, start=1):
+            cm.append(report_dict['accuracy'])
+        
+        plt.scatter(range(n_layers), cm)
+        plt.plot(range(n_layers), cm, label=token)
+        plt.xticks(range(int(min(plt.xticks()[0])), int(max(plt.xticks()[0])) + 1))
+        plt.xlabel('layer')
+        plt.ylabel('IIA')
+    
+    plt.title(f'IIA when targeting tokens one by one, causal model {label}')
+    plt.rcParams.update({'figure.autolayout': True})
+    plt.legend()
+    plt.tight_layout()
+    
+    save_file_name = f'{train_id}_IIA_per_layer_targeting_tokens_{label}.png'
+    file_path = os.path.join(save_dir_path, save_file_name)
+    plt.savefig(file_path)
+    plt.close()
+
 def visualize_simple_per_token(results_path, save_dir_path, n_layers, token, subspace, causal_model_family):
             
     for test_id, model_info in causal_model_family.causal_models.items():
@@ -220,9 +252,11 @@ def visualize_connected_components(matrix, causal_model_family):
     color_map = {1: 'red', 2: 'green', 3: 'blue'}
 
     i = 0 # axes id
+    maximal_cliques = {}
     for label, subgraph in subgraphs.items():
 
         cliques = list(nx.find_cliques(subgraph))
+        maximal_cliques[label] = cliques
         pos = positions[label]
 
         # visualizing the subgraph
@@ -256,3 +290,4 @@ def visualize_connected_components(matrix, causal_model_family):
     plt.tight_layout()
     plt.savefig(f'connected_component_visualization.png')
     plt.close()
+    return maximal_cliques

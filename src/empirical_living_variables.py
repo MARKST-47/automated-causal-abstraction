@@ -8,18 +8,23 @@ import torch
 from torch.utils.data import DataLoader
 import argparse
 from causal_models import SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results, visualize_simple_per_token
+from utils import arithmetic_input_sampler, save_results, visualize_model_all_tokens
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-from pyvene import (
-    IntervenableModel,
-    RepresentationConfig,
-    IntervenableConfig,
-    VanillaIntervention
-)
+# from pyvene import (
+#     IntervenableModel,
+#     RepresentationConfig,
+#     IntervenableConfig,
+#     VanillaIntervention
+# )
+
+from my_pyvene.models.intervenable_base import IntervenableModel
+from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
+from my_pyvene.models.interventions import VanillaIntervention
+
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -71,83 +76,81 @@ def main():
     # get different causal models
     simple_summing_family = SimpleSummingCausalModels()
 
-    for low_rank_dimension in [32, 64, 128, 256]:
-    
-        for id, model_info in simple_summing_family.causal_models.items():
+    for id, model_info in simple_summing_family.causal_models.items():
 
-            causal_model = model_info['causal_model']
+        causal_model = model_info['causal_model']
 
-            # generate counterfactual data
-            print('generating data for DAS...')
+        # generate counterfactual data
+        print('generating data for DAS...')
 
-            counterfactual_data = causal_model.generate_counterfactual_dataset(
-                args.n_examples,
-                intervention_id,
-                args.batch_size,
-                device="cuda:0",
-                sampler=arithmetic_input_sampler,
-                inputFunction=tokenizePrompt
-            )
-
-            for token in [0,1,2,3,4,5]:
-                for layer in range(model_config.n_layer):
-
-                    # define intervention model
-                    intervenable_config = IntervenableConfig(
-                        model_type=type(model),
-                        representations=[
-                            RepresentationConfig(
-                                layer,  # layer
-                                "block_output",  # intervention type
-                                "pos",  # intervention unit is now aligne with tokens; default though
-                                1,  # max number of tokens to intervene on
-                                # subspace_partition=None,  # binary partition with equal sizes
-                                # intervention_link_key=0,
-                            )
-                        ],
-                        intervention_types=VanillaIntervention,
-                    )
-
-                    intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
-                    intervenable.set_device("cuda")
-
-                    for parameter in intervenable.get_trainable_parameters():
-                        parameter.to("cuda:0")
-
-                    # vanilla intervention happening
-                    print('vanilla intervening on gpt2')
-
-                    eval_labels = []
-                    eval_preds = []
-                    with torch.no_grad():
-                        epoch_iterator = tqdm(DataLoader(counterfactual_data, args.batch_size), desc=f"Test")
-                        for step, batch in enumerate(epoch_iterator):
-                            for k, v in batch.items():
-                                if v is not None and isinstance(v, torch.Tensor):
-                                    batch[k] = v.to("cuda")
-                            batch["input_ids"] = batch["input_ids"].squeeze()
-                            batch["source_input_ids"] = batch["source_input_ids"].squeeze(2)
-
-                            if batch["intervention_id"][0] == 0:
-
-                                _, counterfactual_outputs = intervenable(
-                                    {"input_ids": batch["input_ids"]}, # base
-                                    [{"input_ids": batch["source_input_ids"][:, 0]}], # source, selecting all rows and only the values from the first column
-                                    unit_locations={
-                                        "sources->base": token
-                                    },
-                                    subspaces=[
-                                        [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
-                                    ]
-                                )
-                            
-                            eval_labels += [batch["labels"].type(torch.long).squeeze() - min_class_value]
-                            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-                    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
-                    save_results(args.results_path, report, layer, low_rank_dimension, token, id)
+        counterfactual_data = causal_model.generate_counterfactual_dataset(
+            args.n_examples,
+            intervention_id,
+            args.batch_size,
+            device="cuda:0",
+            sampler=arithmetic_input_sampler,
+            inputFunction=tokenizePrompt
+        )
 
         for token in [0,1,2,3,4,5]:
-            visualize_simple_per_token(args.results_path, save_dir_path, model_config.n_layer, token, low_rank_dimension, simple_summing_family)
+            for layer in range(model_config.n_layer):
+
+                # define intervention model
+                intervenable_config = IntervenableConfig(
+                    model_type=type(model),
+                    representations=[
+                        RepresentationConfig(
+                            layer,  # layer
+                            "block_input",
+                            # "block_output",  # intervention type
+                            # "pos",  # intervention unit is now aligne with tokens; default though
+                            # 1,  # max number of tokens to intervene on
+                            # subspace_partition=None,  # binary partition with equal sizes
+                            # intervention_link_key=0,
+                        )
+                    ],
+                    intervention_types=VanillaIntervention,
+                )
+
+                intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
+                intervenable.set_device("cuda")
+
+                for parameter in intervenable.get_trainable_parameters():
+                    parameter.to("cuda:0")
+
+                # vanilla intervention happening
+                print('vanilla intervening on gpt2')
+
+                eval_labels = []
+                eval_preds = []
+                with torch.no_grad():
+                    epoch_iterator = tqdm(DataLoader(counterfactual_data, args.batch_size), desc=f"Test")
+                    for step, batch in enumerate(epoch_iterator):
+                        for k, v in batch.items():
+                            if v is not None and isinstance(v, torch.Tensor):
+                                batch[k] = v.to("cuda")
+                        batch["input_ids"] = batch["input_ids"].squeeze()
+                        batch["source_input_ids"] = batch["source_input_ids"].squeeze(2)
+
+                        if batch["intervention_id"][0] == 0:
+
+                            _, counterfactual_outputs = intervenable(
+                                {"input_ids": batch["input_ids"]}, # base
+                                [{"input_ids": batch["source_input_ids"][:, 0]}], # source, selecting all rows and only the values from the first column
+                                unit_locations={
+                                    "sources->base": token
+                                },
+                                # subspaces=[
+                                #     [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
+                                # ]
+                            )
+                        
+                        eval_labels += [batch["labels"].type(torch.long).squeeze() - min_class_value]
+                        eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+                report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+                save_results(args.results_path, report, layer, token, id, id)
+
+        visualize_model_all_tokens(args.results_path, save_dir_path, model_config.n_layer, id, model_info['label'])
 
 if __name__ =="__main__":
     main()
