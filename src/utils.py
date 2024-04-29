@@ -199,7 +199,7 @@ def visualize_graph(graph_encoding, label=''):
     plt.close()
 
 
-def visualize_connected_components(matrix, causal_model_family):
+def visualize_connected_components(matrix, causal_model_family, title_label=''):
     G = nx.Graph()
 
     for i in range(matrix.shape[0]):
@@ -272,7 +272,7 @@ def visualize_connected_components(matrix, causal_model_family):
         )
 
         # highlight cliques with these colors
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k'] # len is 7
+        colors = ['r', 'g', 'b', 'c', 'm', 'y'] # len is 7
         
         for j, clique in enumerate(cliques):
             nx.draw_networkx_nodes(
@@ -288,6 +288,6 @@ def visualize_connected_components(matrix, causal_model_family):
         i += 1
 
     plt.tight_layout()
-    plt.savefig(f'connected_component_visualization.png')
+    plt.savefig(f'connected_component_visualization_{title_label}.png')
     plt.close()
     return maximal_cliques
