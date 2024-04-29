@@ -165,7 +165,15 @@ def main():
 
     all_combinations = get_all_combinations(maximal_cliques)
     best_combo = find_least_overlap_tuple(all_combinations)
-    print(calculate_overlap(best_combo))
-
+    overlap_percentage, _ = calculate_overlap(best_combo)
+    print(overlap_percentage)
+    i = 0
+    for data in best_combo:
+        best_combo_path = os.path.join(args.results_path, f'class_data_{i+1}.npy')
+        np.save(best_combo_path, data)
+        loaded_arr = np.load(best_combo_path, allow_pickle=True)
+        print(loaded_arr)
+        i += 1
+    
 if __name__ =="__main__":
     main()
