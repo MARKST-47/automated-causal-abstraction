@@ -11,6 +11,7 @@ from pyvene import count_parameters, set_seed
 import argparse
 from causal_models import ArithmeticCausalModels
 import numpy as np
+import json
 from utils import arithmetic_input_sampler, visualize_connected_components
 
 from transformers import (GPT2Tokenizer,
@@ -182,6 +183,8 @@ def train_intervenable(counterfactual_data, model, layer, low_rank_dimension, ba
                 optimizer.step()
                 intervenable.set_zero_grad()
             total_step += 1
+    
+    return intervenable
 
 def main():
 
@@ -227,6 +230,9 @@ def main():
     
     # random subset of bases
     T = random.sample(D, args.n_testing)
+    T_saved = np.array(T)
+    T_path = os.path.join(args.results_path, 'testing_bases.npy')
+    np.save(T_path, T_saved)
 
     # array of runs to average over multiple runs --> obtain run average and variance
     # R = []
@@ -267,18 +273,21 @@ def main():
                                             args.batch_size, args.epochs, 
                                             args.gradient_accumulation_steps, 
                                             min_class_value)
+        
+        intervenable_path = os.path.join(args.results_path, f'intervenable_{cm_id}')
+        intervenable.save(intervenable_path)
 
         # eval on all counterfactual data C_i
         iia_c[cm_id] = eval_intervenable(intervenable, training_counterfactual_data, args.batch_size, low_rank_dimension)
         print(f"Accuracy when evaluating on the entire data: {iia_c[cm_id]}")
 
         # generate counterfactual data S_i
-        testing_batch_size = 2 # beause we evaluate per pair
+        testing_batch_size = 2 # because we evaluate per pair
         testing_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
             args.n_testing,
             intervention_id,
             testing_batch_size, # batch size when testing
-            T,
+            T, # random subset of bases samples
             device="cuda:0",
             sampler=arithmetic_input_sampler,
             inputFunction=tokenizePrompt
@@ -289,19 +298,17 @@ def main():
         intervenable_models[cm_id] = intervenable # save trained intervenable model
 
         # evaluate per pair of data in training data
-        for i, x in enumerate(testing_counterfactual_data):
-            for j, y in enumerate(testing_counterfactual_data):
+        for i in range(args.n_testing):
+            for j in range(i+1, args.n_testing):
 
-                if i == j:
-                    continue
+                x = testing_counterfactual_data[i]
+                y = testing_counterfactual_data[j]
 
-                eval_data = np.array([x,y])
-                graph_encoding[i][j] = eval_intervenable(intervenable, eval_data, testing_batch_size, low_rank_dimension)
-                # ensure creation of undirected graph
-                if graph_encoding[i][j] > graph_encoding[j][i]:
-                    graph_encoding[j][i] = graph_encoding[i][j]
-                else:
-                    graph_encoding[i][j] = graph_encoding[j][i]
+                iia_xy = eval_intervenable(intervenable, np.array([x,y]), testing_batch_size, low_rank_dimension)
+                iia_yx = eval_intervenable(intervenable, np.array([y,x]), testing_batch_size, low_rank_dimension)
+                iia = (iia_xy + iia_yx) / 2
+                graph_encoding[i][j] = iia
+                graph_encoding[j][i] = iia
         
         # save graph
         G[cm_id] = graph_encoding
@@ -341,9 +348,20 @@ def main():
                         best_model = id
 
                 graph[i][j] = best_model
+    
+    # save graph
+    graph_path = os.path.join(args.results_path, 'graph.pt')
+    torch.save(graph, graph_path)
+
+    # save iia_s
+    iias_path = os.path.join(args.results_path, 'iia_s.json')
+    with open(iias_path, 'w') as file:
+        json.dump(iia_s, file)
 
     print(graph)
     print(iia_s)
+    print(iia_c)
+
 
     # maximal_cliques = visualize_connected_components(graph, arithmetic_family, title_label=f'layer_{layer}_lwr_{low_rank_dimension}')
     # print(maximal_cliques)
