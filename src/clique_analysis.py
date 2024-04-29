@@ -171,8 +171,7 @@ def main():
     for data in best_combo:
         best_combo_path = os.path.join(args.results_path, f'class_data_{i+1}.npy')
         np.save(best_combo_path, data)
-        loaded_arr = np.load(best_combo_path, allow_pickle=True)
-        print(loaded_arr)
+        # loaded_arr = np.load(best_combo_path, allow_pickle=True)
         i += 1
     
 if __name__ =="__main__":
