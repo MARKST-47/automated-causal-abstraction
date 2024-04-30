@@ -169,6 +169,7 @@ def main():
     print(overlap_percentage)
     i = 0
     for data in best_combo:
+        print(data)
         best_combo_path = os.path.join(args.results_path, f'class_data_{i+1}.npy')
         np.save(best_combo_path, data)
         # loaded_arr = np.load(best_combo_path, allow_pickle=True)
