@@ -162,6 +162,5 @@ def main():
     plt.savefig('compared_IIA.png')
     plt.close()
 
-
 if __name__ =="__main__":
     main()
