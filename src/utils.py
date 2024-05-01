@@ -15,6 +15,24 @@ def arithmetic_input_sampler():
     C = randNum()
     return {"X":A, "Y":B, "Z":C}
 
+def biased_sampler_1():
+    A = randNum(lower=1, upper=3)
+    B = randNum(lower=1, upper=3)
+    C = randNum()
+    return {"X":A, "Y":B, "Z":C}
+
+def biased_sampler_2():
+    A = randNum(lower=7, upper=10)
+    B = randNum()
+    C = randNum(lower=7, upper=10)
+    return {"X":A, "Y":B, "Z":C}
+
+def biased_sampler_3():
+    A = randNum()
+    B = randNum(lower=4, upper=6)
+    C = randNum(lower=4, upper=6)
+    return {"X":A, "Y":B, "Z":C}
+
 def redundancy_input_sampler():
     A = randNum()
     B = randNum()
