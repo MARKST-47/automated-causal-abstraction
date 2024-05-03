@@ -77,32 +77,71 @@ def tokenizePrompt(input):
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
 def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, min_class_value=3):
-        # eval on all data
-        eval_labels = []
-        eval_preds = []
-        with torch.no_grad():
-            epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
-            for step, inputs in enumerate(epoch_iterator):
-                for k, v in inputs.items():
-                    if v is not None and isinstance(v, torch.Tensor):
-                        inputs[k] = v.to("cuda")
+    # eval on all data
+    eval_labels = []
+    eval_preds = []
+    with torch.no_grad():
+        epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
+        for step, inputs in enumerate(epoch_iterator):
+            for k, v in inputs.items():
+                if v is not None and isinstance(v, torch.Tensor):
+                    inputs[k] = v.to("cuda")
+            inputs["input_ids"] = inputs["input_ids"].squeeze()
+            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+            b_s = inputs["input_ids"].shape[0]
+            _, counterfactual_outputs = intervenable(
+                {"input_ids": inputs["input_ids"]},
+                [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                {"sources->base": [0,1,2,3,4,5]},
+                subspaces=[
+                    [[_ for _ in range(low_rank_dimension)]] * batch_size
+                ]
+            )
 
-                inputs["input_ids"] = inputs["input_ids"].squeeze()
-                inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-                b_s = inputs["input_ids"].shape[0]
-                _, counterfactual_outputs = intervenable(
-                    {"input_ids": inputs["input_ids"]},
-                    [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                    {"sources->base": [0,1,2,3,4,5]},
-                    subspaces=[
-                        [[_ for _ in range(low_rank_dimension)]] * batch_size
-                    ]
-                )
+            eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+    return report['accuracy']
 
-                eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
-                eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-        report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
-        return report['accuracy']
+def eval_one_point(intervenable, inputs, batch_size, low_rank_dimension, min_class_value=3):
+    # eval on all data
+    eval_labels = []
+    eval_preds = []
+    with torch.no_grad():
+        for k, v in inputs.items():
+            if v is not None and isinstance(v, torch.Tensor):
+                inputs[k] = v.to("cuda")
+        
+        inputs["input_ids"] = inputs["input_ids"]
+        inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+        
+        b_s = inputs["input_ids"].shape[0]
+        _, counterfactual_outputs = intervenable(
+            {"input_ids": inputs["input_ids"]},
+            [{"input_ids": inputs["source_input_ids"][:, 0]}],
+            {"sources->base": [0,1,2,3,4,5]},
+            subspaces=[
+                [[_ for _ in range(low_rank_dimension)]] * batch_size
+            ]
+        )
+
+        eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+        eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1).squeeze()]
+
+        _, counterfactual_outputs = intervenable(
+            {"input_ids": inputs["input_ids"]},
+            [{"input_ids": inputs["input_ids"]}],
+            {"sources->base": [0,1,2,3,4,5]},
+            subspaces=[
+                [[_ for _ in range(low_rank_dimension)]] * batch_size
+            ]
+        )
+
+        eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+        eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1).squeeze()]
+    
+    report = classification_report(torch.tensor(eval_labels).cpu(), torch.tensor(eval_preds).cpu(), output_dict=True) # get the IIA
+    return report['accuracy']
 
 def train_intervenable(counterfactual_data, model, layer, low_rank_dimension, batch_size, epochs, gradient_accumulation_steps, min_class_value=3):
     
@@ -186,11 +225,15 @@ def train_intervenable(counterfactual_data, model, layer, low_rank_dimension, ba
     
     return intervenable
 
+def decode_tensor(tensor, vocabulary):
+    token_ids = tensor.squeeze().tolist()
+    return {'X': vocabulary[token_ids[0]], 'Y': vocabulary[token_ids[2]], 'Z': vocabulary[token_ids[4]]}
+
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
-    parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='disentangling_results/', help='path to the results folder')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
@@ -215,12 +258,14 @@ def main():
     min_class_value = 3
     
     tokenizer = load_tokenizer('gpt2')
+    # hard-coded vocabulary
+    vocabulary = {'1': 16, '2': 17, '3': 18, '4': 19, '5': 20, '6': 21, '7': 22, '8': 23, '9': 24, '10': 940, '+': 10, '=': 28}
+    inv_vocabulary = {v: k for k, v in vocabulary.items()}
+    # vocabulary = tokenizer.get_vocab()
     model_config = GPT2Config.from_pretrained(args.model_path)
     model_config.pad_token_id = tokenizer.pad_token_id
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
     model.resize_token_embeddings(len(tokenizer))
-
-    ##### PHASE 1 ######
 
     arithmetic_family = ArithmeticCausalModels()
     
@@ -282,11 +327,10 @@ def main():
         print(f"Accuracy when evaluating on the entire data: {iia_c[cm_id]}")
 
         # generate counterfactual data S_i
-        testing_batch_size = 2 # because we evaluate per pair
         testing_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
             args.n_testing,
             intervention_id,
-            testing_batch_size, # batch size when testing
+            args.batch_size, # batch size when testing
             T, # random subset of bases samples
             device="cuda:0",
             sampler=arithmetic_input_sampler,
@@ -294,21 +338,28 @@ def main():
         )
 
         # eval on the whole dataset
-        iia_s[cm_id] = eval_intervenable(intervenable, testing_counterfactual_data, testing_batch_size, low_rank_dimension)
+        iia_s[cm_id] = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
         intervenable_models[cm_id] = intervenable # save trained intervenable model
 
         # evaluate per pair of data in training data
-        for i in range(args.n_testing):
-            for j in range(i+1, args.n_testing):
 
-                x = testing_counterfactual_data[i]
-                y = testing_counterfactual_data[j]
+        for i, x in enumerate(testing_counterfactual_data):
+            iia = eval_one_point(intervenable, x, 1, low_rank_dimension)
+            source_input = decode_tensor(x['source_input_ids'], inv_vocabulary)
+            base_input = T[i] # equivalent to base_input = decode_tensor(x['input_ids'], inv_vocabulary)
+            # graph_encoding[i][x["source_input_ids"]] = iia
+        break
+        # for i in range(args.n_testing):
+        #     for j in range(i+1, args.n_testing):
 
-                iia_xy = eval_intervenable(intervenable, np.array([x,y]), testing_batch_size, low_rank_dimension)
-                iia_yx = eval_intervenable(intervenable, np.array([y,x]), testing_batch_size, low_rank_dimension)
-                iia = (iia_xy + iia_yx) / 2
-                graph_encoding[i][j] = iia
-                graph_encoding[j][i] = iia
+        #         x = testing_counterfactual_data[i]
+        #         y = testing_counterfactual_data[j]
+
+        #         iia_xy = eval_intervenable(intervenable, np.array([x,y]), testing_batch_size, low_rank_dimension)
+        #         iia_yx = eval_intervenable(intervenable, np.array([y,x]), testing_batch_size, low_rank_dimension)
+        #         iia = (iia_xy + iia_yx) / 2
+        #         graph_encoding[i][j] = iia
+        #         graph_encoding[j][i] = iia
         
         # save graph
         G[cm_id] = graph_encoding
@@ -361,27 +412,6 @@ def main():
     print(graph)
     print(iia_s)
     print(iia_c)
-
-
-    # maximal_cliques = visualize_connected_components(graph, arithmetic_family, title_label=f'layer_{layer}_lwr_{low_rank_dimension}')
-    # print(maximal_cliques)
-
-    ##### PHASE 2 ######
-    
-    # construct graph
-
-    # get maximal cliques
-
-    # discard all cliques which are not made out of the same label
-
-    # group by causal model label
-
-    # evaluate I_i on each of the cliques labelled with label i
-
-    # average the results
-
-    # check if iia_s[i] > average(eval(I_i, [S_i[a_1],...S_i[a_l]])), where a_1, .., a_l are the positions of the data in the clique
-    
 
 if __name__ =="__main__":
     main()
