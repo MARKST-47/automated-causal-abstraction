@@ -175,7 +175,6 @@ def train_intervenable(counterfactual_data, model, layer, low_rank_dimension, ba
     print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
     train_iterator = trange(0, int(epochs), desc="Epoch")
 
-    # training with two examples
     for epoch in train_iterator:
         torch.cuda.empty_cache()
         epoch_iterator = tqdm(
@@ -227,7 +226,7 @@ def train_intervenable(counterfactual_data, model, layer, low_rank_dimension, ba
 
 def decode_tensor(tensor, vocabulary):
     token_ids = tensor.squeeze().tolist()
-    return {'X': vocabulary[token_ids[0]], 'Y': vocabulary[token_ids[2]], 'Z': vocabulary[token_ids[4]]}
+    return {'X': int(vocabulary[token_ids[0]]), 'Y': int(vocabulary[token_ids[2]]), 'Z': int(vocabulary[token_ids[4]])}
 
 def main():
 
@@ -272,12 +271,27 @@ def main():
     D = [] # bases
     for _ in range(args.n_training):
         D.append(arithmetic_input_sampler())
+
+    sources = []
+    for _ in range(args.n_training):
+        sources.append(arithmetic_input_sampler())
+
+    sampled_indices = random.sample(range(len(D)), args.n_testing)
+    pairs = [(D[i], sources[i]) for i in sampled_indices]
+    T, test_sources = zip(*pairs) 
+
+    print(T)
+    print(test_sources)
     
     # random subset of bases
-    T = random.sample(D, args.n_testing)
+    # T = random.sample(D, args.n_testing)
     T_saved = np.array(T)
     T_path = os.path.join(args.results_path, 'testing_bases.npy')
     np.save(T_path, T_saved)
+
+    T_sources_saved = np.array(test_sources)
+    T_sources_path = os.path.join(args.results_path, 'testing_sources.npy')
+    np.save(T_sources_path, T_sources_saved)
 
     # array of runs to average over multiple runs --> obtain run average and variance
     # R = []
@@ -304,6 +318,7 @@ def main():
             intervention_id,
             args.batch_size,
             D,
+            sources,
             device="cuda:0",
             sampler=arithmetic_input_sampler,
             inputFunction=tokenizePrompt
@@ -332,6 +347,7 @@ def main():
             intervention_id,
             args.batch_size, # batch size when testing
             T, # random subset of bases samples
+            test_sources,
             device="cuda:0",
             sampler=arithmetic_input_sampler,
             inputFunction=tokenizePrompt
@@ -344,22 +360,13 @@ def main():
         # evaluate per pair of data in training data
 
         for i, x in enumerate(testing_counterfactual_data):
-            iia = eval_one_point(intervenable, x, 1, low_rank_dimension)
-            source_input = decode_tensor(x['source_input_ids'], inv_vocabulary)
-            base_input = T[i] # equivalent to base_input = decode_tensor(x['input_ids'], inv_vocabulary)
-            # graph_encoding[i][x["source_input_ids"]] = iia
-        break
-        # for i in range(args.n_testing):
-        #     for j in range(i+1, args.n_testing):
+            for j, source in enumerate(test_sources):
 
-        #         x = testing_counterfactual_data[i]
-        #         y = testing_counterfactual_data[j]
-
-        #         iia_xy = eval_intervenable(intervenable, np.array([x,y]), testing_batch_size, low_rank_dimension)
-        #         iia_yx = eval_intervenable(intervenable, np.array([y,x]), testing_batch_size, low_rank_dimension)
-        #         iia = (iia_xy + iia_yx) / 2
-        #         graph_encoding[i][j] = iia
-        #         graph_encoding[j][i] = iia
+                x['source_input_ids'] = tokenizePrompt(source).unsqueeze(0).to("cuda")
+                iia = eval_one_point(intervenable, x, 1, low_rank_dimension)
+                graph_encoding[i][j] = iia
+                # source_input = decode_tensor(x['source_input_ids'], inv_vocabulary)
+                # base_input = T[i] # equivalent to base_input = decode_tensor(x['input_ids'], inv_vocabulary)
         
         # save graph
         G[cm_id] = graph_encoding
