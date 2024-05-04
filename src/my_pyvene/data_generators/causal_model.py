@@ -384,6 +384,7 @@ class CausalModel:
             intervention_id,
             batch_size,
             bases,
+            all_sources,
             sampler = None,
             intervention_sampler=None,
             filter=None,
@@ -420,7 +421,7 @@ class CausalModel:
                         for var in self.variables:
                             if var not in intervention:
                                 continue
-                            source = sampler() # sources[count] here as well
+                            source = all_sources[count] # sources[count] here as well
                             sources.append(inputFunction(source))
                             source_dic[var] = source
                         for _ in range(maxlength - len(sources)):
