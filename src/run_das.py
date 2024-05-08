@@ -89,7 +89,10 @@ def main():
 
     if not os.path.exists(args.model_path):
         raise argparse.ArgumentTypeError("Invalid model_path. Path does not exist.")
-    
+
+    os.makedirs(args.results_path, exist_ok=True)
+
+    args.results_path = os.path.join(args.results_path, args.causal_model_type)
     os.makedirs(args.results_path, exist_ok=True)
 
     save_dir_path = os.path.join(args.results_path, 'plots')
@@ -105,7 +108,6 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
     model.resize_token_embeddings(len(tokenizer))
 
-    print(args.causal_model_type)
     if args.causal_model_type == 'arithmetic':
         arithmetic_family = ArithmeticCausalModels()
     elif args.causal_model_type == 'simple':
@@ -206,6 +208,9 @@ def main():
 
                 # generate testing counterfactual data
                 print('testing...')
+
+                intervenable_path = os.path.join(args.results_path, f'intervenable_models/cm_{train_id}/intervenable_{low_rank_dimension}_{layer}')
+                intervenable.save(intervenable_path)
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
 
