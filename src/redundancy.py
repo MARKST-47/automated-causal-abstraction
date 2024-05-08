@@ -17,17 +17,17 @@ from transformers import (GPT2Tokenizer,
                           GPT2ForSequenceClassification)
 
 # Temporary fix
-from my_pyvene.models.intervenable_base import IntervenableModel
-from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
-from my_pyvene.models.interventions import RotatedSpaceIntervention
+# from my_pyvene.models.intervenable_base import IntervenableModel
+# from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
+# from my_pyvene.models.interventions import RotatedSpaceIntervention
 
-# from pyvene import (
-#     IntervenableModel,
-#     IntervenableConfig,
-#     LowRankRotatedSpaceIntervention,
-#     RotatedSpaceIntervention,
-#     RepresentationConfig
-# )
+from pyvene import (
+    IntervenableModel,
+    IntervenableConfig,
+    LowRankRotatedSpaceIntervention,
+    RotatedSpaceIntervention,
+    RepresentationConfig
+)
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)

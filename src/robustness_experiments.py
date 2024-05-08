@@ -19,7 +19,8 @@ from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-from my_pyvene.models.intervenable_base import IntervenableModel
+# from my_pyvene.models.intervenable_base import IntervenableModel
+from pyvene import IntervenableModel
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
