@@ -48,9 +48,13 @@ def save_results(results_path, report, layer, exp_id, train_id, test_id):
         json.dump(report, json_file)
 
 
-def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family):
+def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family, causal_model_type='arithmetic'):
             
     for test_id, model_info in arithmetic_family.causal_models.items():
+
+        if causal_model_type == 'simple':
+            if test_id != train_id:
+                continue
         
         label = model_info['label']
 
