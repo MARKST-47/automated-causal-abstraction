@@ -12,22 +12,25 @@ import argparse
 from causal_models import ArithmeticCausalModels
 import numpy as np
 import json
+import matplotlib.pyplot as plt
 from utils import arithmetic_input_sampler, visualize_connected_components
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-# from pyvene import (
-#     IntervenableModel,
-#     IntervenableConfig,
-#     LowRankRotatedSpaceIntervention
-# )
+from pyvene import (
+    IntervenableModel,
+    IntervenableConfig,
+    LowRankRotatedSpaceIntervention
+)
+
+from my_pyvene.analyses.visualization import rotation_token_heatmap
 
 # temporary import
-from my_pyvene.models.intervenable_base import IntervenableModel
-from my_pyvene.models.configuration_intervenable_model import IntervenableConfig
-from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
+# from my_pyvene.models.intervenable_base import IntervenableModel
+# from my_pyvene.models.configuration_intervenable_model import IntervenableConfig
+# from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -115,7 +118,7 @@ def eval_one_point(intervenable, inputs, batch_size, low_rank_dimension, min_cla
         inputs["input_ids"] = inputs["input_ids"]
         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
         
-        b_s = inputs["input_ids"].shape[0]
+        # b_s = inputs["input_ids"].shape[0]
         _, counterfactual_outputs = intervenable(
             {"input_ids": inputs["input_ids"]},
             [{"input_ids": inputs["source_input_ids"][:, 0]}],
@@ -312,6 +315,7 @@ def main():
 
         print('generating data for DAS...')
 
+        
         # generate counterfactual data C_i
         training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
             args.n_training,
@@ -360,9 +364,10 @@ def main():
         # evaluate per pair of data in training data
 
         for i, x in enumerate(testing_counterfactual_data):
-            for j, source in enumerate(test_sources):
+            for j, y in enumerate(T):
+                # inputToId function --> decode(x): x
+                x['source_input_ids'] = tokenizePrompt(y).unsqueeze(0).to("cuda")
 
-                x['source_input_ids'] = tokenizePrompt(source).unsqueeze(0).to("cuda")
                 iia = eval_one_point(intervenable, x, 1, low_rank_dimension)
                 graph_encoding[i][j] = iia
                 # source_input = decode_tensor(x['source_input_ids'], inv_vocabulary)
@@ -370,6 +375,8 @@ def main():
         
         # save graph
         G[cm_id] = graph_encoding
+
+        
     
     print(G)
 

@@ -2,6 +2,7 @@ from typing import Dict, Any
 from abc import ABC, abstractmethod
 from utils import randNum
 from my_pyvene.data_generators.causal_model import CausalModel
+# from pyvene import CausalModel
 
 class CausalModelFamily(ABC): # abstract base class
     def __init__(self):
