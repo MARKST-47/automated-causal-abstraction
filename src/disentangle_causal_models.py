@@ -345,7 +345,7 @@ def main():
         testing_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset_on_bases(
             args.n_testing,
             intervention_id,
-            args.batch_size, # batch size when testing
+            args.n_testing, # batch size when testing
             T, # random subset of bases samples
             test_sources,
             device="cuda:0",
@@ -354,7 +354,7 @@ def main():
         )
 
         # eval on the whole dataset
-        iia_s[cm_id] = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
+        iia_s[cm_id] = eval_intervenable(intervenable, testing_counterfactual_data, args.n_testing, low_rank_dimension)
         intervenable_models[cm_id] = intervenable # save trained intervenable model
 
         # evaluate per pair of data in training data
