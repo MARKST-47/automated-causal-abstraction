@@ -9,7 +9,7 @@ import random
 from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
-from causal_models import ArithmeticCausalModels
+from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 from utils import arithmetic_input_sampler, save_results,visualize_per_trained_model
 
 from transformers import (GPT2Tokenizer,
@@ -21,6 +21,10 @@ from pyvene import (
     IntervenableConfig,
     LowRankRotatedSpaceIntervention
 )
+
+# from my_pyvene.models.intervenable_base import IntervenableModel
+# from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
+# from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -73,6 +77,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
@@ -84,7 +89,10 @@ def main():
 
     if not os.path.exists(args.model_path):
         raise argparse.ArgumentTypeError("Invalid model_path. Path does not exist.")
-    
+
+    os.makedirs(args.results_path, exist_ok=True)
+
+    args.results_path = os.path.join(args.results_path, args.causal_model_type)
     os.makedirs(args.results_path, exist_ok=True)
 
     save_dir_path = os.path.join(args.results_path, 'plots')
@@ -100,7 +108,12 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
     model.resize_token_embeddings(len(tokenizer))
 
-    arithmetic_family = ArithmeticCausalModels()
+    if args.causal_model_type == 'arithmetic':
+        arithmetic_family = ArithmeticCausalModels()
+    elif args.causal_model_type == 'simple':
+        arithmetic_family = SimpleSummingCausalModels()
+    else:
+        raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
     
     for train_id, model_info in arithmetic_family.causal_models.items():
 
@@ -196,7 +209,14 @@ def main():
                 # generate testing counterfactual data
                 print('testing...')
 
+                intervenable_path = os.path.join(args.results_path, f'intervenable_models/cm_{train_id}/intervenable_{low_rank_dimension}_{layer}')
+                intervenable.save(intervenable_path)
+
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
+
+                    if args.causal_model_type == 'simple':
+                        if test_id != train_id:
+                            continue
 
                     testing_counterfactual_data = test_model_info['causal_model'].generate_counterfactual_dataset(
                         args.n_testing,
@@ -232,9 +252,9 @@ def main():
                             eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
                     report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
-
+        
         for experiment_id in [64, 128, 256, 768, 4608]:
-            visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family)
+            visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)
 
 if __name__ =="__main__":
     main()

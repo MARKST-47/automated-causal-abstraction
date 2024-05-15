@@ -9,7 +9,7 @@ import random
 from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
-from causal_models import ArithmeticCausalModels
+from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 import numpy as np
 from utils import arithmetic_input_sampler, visualize_graph
 
@@ -17,16 +17,16 @@ from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
-# from pyvene import (
-#     IntervenableModel,
-#     IntervenableConfig,
-#     LowRankRotatedSpaceIntervention
-# )
+from pyvene import (
+    IntervenableModel,
+    IntervenableConfig,
+    LowRankRotatedSpaceIntervention
+)
 
 # temporary import
-from my_pyvene.models.intervenable_base import IntervenableModel
-from my_pyvene.models.configuration_intervenable_model import IntervenableConfig
-from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
+# from my_pyvene.models.intervenable_base import IntervenableModel
+# from my_pyvene.models.configuration_intervenable_model import IntervenableConfig
+# from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -79,6 +79,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
@@ -106,14 +107,20 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
     model.resize_token_embeddings(len(tokenizer))
 
-    arithmetic_family = ArithmeticCausalModels()
+    if args.causal_model_type == 'arithmetic':
+        arithmetic_family = ArithmeticCausalModels()
+    elif args.causal_model_type == 'simple':
+        arithmetic_family = SimpleSummingCausalModels()
+    else:
+        raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
+    
     bases = []
     for _ in range(args.n_training):
         bases.append(arithmetic_input_sampler())
 
-    test_bases = []
-    for _ in range(args.n_testing):
-        test_bases.append(arithmetic_input_sampler())
+    # test_bases = []
+    # for _ in range(args.n_testing):
+    #     test_bases.append(arithmetic_input_sampler())
 
     model_accs = {}
     

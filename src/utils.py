@@ -15,6 +15,24 @@ def arithmetic_input_sampler():
     C = randNum()
     return {"X":A, "Y":B, "Z":C}
 
+def biased_sampler_1():
+    A = randNum(lower=1, upper=3)
+    B = randNum(lower=1, upper=3)
+    C = randNum()
+    return {"X":A, "Y":B, "Z":C}
+
+def biased_sampler_2():
+    A = randNum(lower=7, upper=10)
+    B = randNum()
+    C = randNum(lower=7, upper=10)
+    return {"X":A, "Y":B, "Z":C}
+
+def biased_sampler_3():
+    A = randNum()
+    B = randNum(lower=4, upper=6)
+    C = randNum(lower=4, upper=6)
+    return {"X":A, "Y":B, "Z":C}
+
 def redundancy_input_sampler():
     A = randNum()
     B = randNum()
@@ -30,9 +48,13 @@ def save_results(results_path, report, layer, exp_id, train_id, test_id):
         json.dump(report, json_file)
 
 
-def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family):
+def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family, causal_model_type='arithmetic'):
             
     for test_id, model_info in arithmetic_family.causal_models.items():
+
+        if causal_model_type == 'simple':
+            if test_id != train_id:
+                continue
         
         label = model_info['label']
 

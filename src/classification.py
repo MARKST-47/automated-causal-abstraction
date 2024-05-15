@@ -7,12 +7,14 @@ from causal_models import ArithmeticCausalModels
 from pyvene import set_seed
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
+from utils import biased_sampler_1, biased_sampler_2, biased_sampler_3
 
 def main():
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     # parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
+    parser.add_argument('--n_testing', type=int, default=100, help='number of samples used for predicton during testing')
     args = parser.parse_args()
 
     if not os.path.exists(args.results_path):
@@ -47,10 +49,23 @@ def main():
     model = DecisionTreeClassifier()
     model.fit(features, labels) 
 
-    # predict
-    new_sample = {'X': 2, 'Y': 1, 'Z': 2}
-    prediction = model.predict(np.array(list(new_sample.values())).reshape(1, -1)) 
-    print(prediction)
+    # predict for class 1 aka (A+B)+C
+    for _ in args.n_testing:
+        sample = biased_sampler_1()
+        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
+        print(sample, prediction)
+
+    # prediction for class 2 aka (A+C)+B
+    for _ in args.n_testing:
+        sample = biased_sampler_2()
+        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
+        print(sample, prediction)
+
+    # prediction for class 3 aka A+(B+C)
+    for _ in args.n_testing:
+        sample = biased_sampler_3()
+        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
+        print(sample, prediction)
 
 if __name__ =="__main__":
     main()
