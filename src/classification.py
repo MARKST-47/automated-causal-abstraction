@@ -10,6 +10,9 @@ from sklearn.tree import DecisionTreeClassifier
 from itertools import product
 from utils import construct_input
 from sklearn.model_selection import train_test_split
+from sklearn.tree import plot_tree
+import matplotlib.pyplot as plt
+from sklearn.model_selection import GridSearchCV
 
 def main():
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
@@ -71,9 +74,20 @@ def main():
     print(f'Training size: {len(y_train)}')
     print(f'Testing size: {len(y_test)}')
     
+    # hyperparameter search
+    param_grid = {
+        'criterion': ['gini', 'entropy'], # measures node purity, the thing to minimize
+        'max_depth': [2, 3, 4, 5, None],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': [None, 'sqrt', 'log2'],
+        'ccp_alpha': [0.0, 0.015, 0.1]
+    }
+
+    grid_search = GridSearchCV(DecisionTreeClassifier(), param_grid, cv=5, scoring='accuracy')
     # train the classification
-    model = DecisionTreeClassifier()
-    model.fit(X_train, y_train)
+    grid_search.fit(X_train, y_train)
+    model = grid_search.best_estimator_
 
     # testing
     prediction = model.predict(X_test)
@@ -81,6 +95,13 @@ def main():
     testing_df['true_class'] = y_test
     testing_df['predicted_class'] = prediction
     print(testing_df)
+
+    plt.figure(figsize=(7, 8))
+    plot_tree(model, filled=True, feature_names=features.columns, class_names=["1", "2", "3"])
+    plt.title("Decision Tree Visualization")
+    file_path = os.path.join(args.results_path, "decision_tree.png")
+    plt.savefig(file_path)
+    plt.close()
 
 if __name__ =="__main__":
     main()
