@@ -70,7 +70,8 @@ def main():
     # graph_path = os.path.join(args.results_path, 'graph.pt')
     # graph = torch.load(graph_path)
 
-    graph = generate_random_graph()
+    # graph for testing
+    graph = generate_random_graph(size=6)
     
     set_seed(args.seed)
     
@@ -93,6 +94,7 @@ def main():
     # construct subgraphs based on label
     print('Constructing subgraphs')
     subgraphs = {}
+    n_nodes = {}
     for label in set(nx.get_edge_attributes(G, 'label').values()):
         subgraph = nx.Graph()
 
@@ -106,7 +108,7 @@ def main():
 
                 if not subgraph.has_edge(u, v):
                     subgraph.add_edge(u, v, label=label)
-
+        n_nodes[label] = subgraph.number_of_nodes()
         subgraphs[arithmetic_family.get_label_by_id(label)] = subgraph
 
     # find optimal positions for each subgraph
@@ -124,7 +126,7 @@ def main():
     maximal_cliques = {}
     print('finding cliques')
     for label, subgraph in subgraphs.items():
-
+        
         print(f'finding cliques for graph {label}')
         cliques = list(nx.find_cliques(subgraph))
         maximal_cliques[label] = filter_by_max_length(cliques)
@@ -163,15 +165,18 @@ def main():
     plt.savefig('connected_component_visualization.png')
     plt.close()
 
+    print(n_nodes)
+
     print('getting the best combo')
     print(maximal_cliques)
     all_combinations = get_all_combinations(maximal_cliques)
-    best_combo = find_least_overlap_tuple(all_combinations)
+    best_combo = find_least_overlap_tuple(all_combinations) # getting disjoint lists of cliques
     overlap_percentage, _ = calculate_overlap(best_combo)
-    print(overlap_percentage)
+    print(f'Percentage of how disjoint are the cliques from each subgraph: {overlap_percentage}')
     i = 0
     for data in best_combo:
         print(data)
+        print(f'Percentage out of the entire subgraph for causal model {i+1} data: {len(data)/n_nodes[i+1]}')
         best_combo_path = os.path.join(args.results_path, f'class_data_{i+1}.npy')
         np.save(best_combo_path, data)
         # loaded_arr = np.load(best_combo_path, allow_pickle=True)
