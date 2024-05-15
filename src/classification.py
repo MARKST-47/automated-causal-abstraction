@@ -7,7 +7,9 @@ from causal_models import ArithmeticCausalModels
 from pyvene import set_seed
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
-from utils import biased_sampler_1, biased_sampler_2, biased_sampler_3
+from itertools import product
+from utils import construct_input
+from sklearn.model_selection import train_test_split
 
 def main():
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
@@ -24,48 +26,61 @@ def main():
     graph_path = os.path.join(args.results_path, 'graph.pt')
     graph = torch.load(graph_path)
 
-    # load subset of bases
-    subset_bases_path = os.path.join(args.results_path, 'testing_bases.npy')
-    T = np.load(subset_bases_path, allow_pickle=True)
-    
+    # get all the arrangements
+    numbers = range(1, 11)
+    arrangements = product(numbers, repeat=3)
+    arr = []
+    for x,y,z in arrangements:
+        inp = construct_input(x,y,z)
+        arr.append(inp)
+
+    # save arrangements
+    arr_saved = np.array(arr)
+    arr_path = os.path.join(args.results_path, 'arrangements.npy')
+    np.save(arr_path, arr_saved)
+
     set_seed(args.seed)
 
     arithmetic_family = ArithmeticCausalModels()
     D = []
 
+    # construct dataset
     for cm_id, model_info in arithmetic_family.causal_models.items():
         best_combo_path = os.path.join(args.results_path, f'class_data_{cm_id}.npy')
         loaded_arr = np.load(best_combo_path, allow_pickle=True)
         for x in loaded_arr:
-            T[x]['class'] = cm_id
-            D.append(T[x])
+            arr[x]['class'] = cm_id
+            D.append(arr[x])
     
-    # construct dataset
     df = pd.DataFrame(D)
     features = df[['X', 'Y', 'Z']]
+    features['X_f1'] = features['X'] < 3
+    features['X_f2'] = features['X'] <= 6
+    features['X_f3'] = features['X'] >= 7
+    features['Y_f1'] = features['Y'] < 3
+    features['Y_f2'] = features['Y'] <= 6
+    features['Y_f3'] = features['Y'] >= 7
+    features['Z_f1'] = features['Z'] < 3
+    features['Z_f2'] = features['Z'] <= 6
+    features['Z_f3'] = features['Z'] >= 7
     labels = df['class']
+
+    # split data intro training and testing data
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+
+    print(f'Training size: {len(y_train)}')
+    print(f'Testing size: {len(y_test)}')
     
     # train the classification
     model = DecisionTreeClassifier()
-    model.fit(features, labels) 
+    model.fit(X_train, y_train)
 
-    # predict for class 1 aka (A+B)+C
-    for _ in args.n_testing:
-        sample = biased_sampler_1()
-        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
-        print(sample, prediction)
-
-    # prediction for class 2 aka (A+C)+B
-    for _ in args.n_testing:
-        sample = biased_sampler_2()
-        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
-        print(sample, prediction)
-
-    # prediction for class 3 aka A+(B+C)
-    for _ in args.n_testing:
-        sample = biased_sampler_3()
-        prediction = model.predict(np.array(list(sample.values())).reshape(1, -1))
-        print(sample, prediction)
+    # testing
+    prediction = model.predict(X_test)
+    testing_df = pd.DataFrame(X_test[['X', 'Y', 'Z']])
+    testing_df['true_class'] = y_test
+    testing_df['predicted_class'] = prediction
+    print(testing_df)
 
 if __name__ =="__main__":
     main()
