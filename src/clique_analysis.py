@@ -42,6 +42,16 @@ def find_least_overlap_tuple(list_of_tuples):
 
     return best_tuple
 
+def generate_random_graph(size=1000):
+    graph = torch.zeros((size, size))
+
+    for i in range(size):
+        for j in range(i + 1, size):
+            graph[i, j] = torch.randint(1, 4, (1,))
+
+    graph += graph.t().clone()
+    return graph
+
 def main():
     
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
@@ -57,12 +67,10 @@ def main():
         raise argparse.ArgumentTypeError("Invalid results_path. Path does not exist.")
 
     # load labelled graph
-    graph_path = os.path.join(args.results_path, 'graph.pt')
-    graph = torch.load(graph_path)
+    # graph_path = os.path.join(args.results_path, 'graph.pt')
+    # graph = torch.load(graph_path)
 
-    # load subset of bases
-    subset_bases_path = os.path.join(args.results_path, 'testing_bases.npy')
-    T = np.load(subset_bases_path, allow_pickle=True)
+    graph = generate_random_graph()
     
     set_seed(args.seed)
     
@@ -70,6 +78,8 @@ def main():
 
     # construct entire graph
     G = nx.Graph()
+
+    print('constructing entire graph')
 
     for i in range(graph.shape[0]):
         G.add_node(i)
@@ -80,18 +90,8 @@ def main():
             if graph[i, j] != 0:
                 G.add_edge(i, j, label=graph[i, j].item()) # label means the causal model
 
-    # saving the graph with all nodes
-    pos = nx.spring_layout(G, k=0.1, iterations=100)
-    color_map = {1: 'red', 2: 'green', 3: 'blue'}
-    edge_colors = [color_map[w['label']] for (u, v, w) in G.edges(data=True)]
-
-    nx.draw_networkx_nodes(G, pos, node_size=30, node_color='lightblue', alpha=0.7)
-    nx.draw_networkx_edges(G, pos, width=1.5, edge_color=edge_colors, alpha=0.7)
-    nx.draw_networkx_labels(G, pos, font_size=8)
-    plt.savefig(f'graph.png')
-    plt.close()
-
     # construct subgraphs based on label
+    print('Constructing subgraphs')
     subgraphs = {}
     for label in set(nx.get_edge_attributes(G, 'label').values()):
         subgraph = nx.Graph()
@@ -122,13 +122,13 @@ def main():
 
     i = 0 # axes id
     maximal_cliques = {}
+    print('finding cliques')
     for label, subgraph in subgraphs.items():
 
+        print(f'finding cliques for graph {label}')
         cliques = list(nx.find_cliques(subgraph))
-        # biggest_clique = max(cliques, key=len)
-        # print(cliques)
-        # print(biggest_clique)
         maximal_cliques[label] = filter_by_max_length(cliques)
+        print(maximal_cliques[label])
         pos = positions[label]
 
         # visualizing the subgraphs
@@ -144,16 +144,16 @@ def main():
         )
 
         # highlight cliques with these colors
-        colors = ['r', 'g', 'b', 'c', 'm', 'y', 'lime'] # len is 7
+        # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'lime'] # len is 7
         
-        for j, clique in enumerate(cliques):
-            nx.draw_networkx_nodes(
-                subgraph,
-                pos,
-                nodelist=clique, 
-                node_color=colors[j % len(colors)], # so we kinda have different colors
-                ax=axes[i]
-            )
+        # for j, clique in enumerate(cliques):
+        #     nx.draw_networkx_nodes(
+        #         subgraph,
+        #         pos,
+        #         nodelist=clique, 
+        #         node_color=colors[j % len(colors)], # so we kinda have different colors
+        #         ax=axes[i]
+        #     )
 
         axes[i].axis('off')
         axes[i].set_title(f"All connected edges with label {label}")
@@ -163,6 +163,8 @@ def main():
     plt.savefig('connected_component_visualization.png')
     plt.close()
 
+    print('getting the best combo')
+    print(maximal_cliques)
     all_combinations = get_all_combinations(maximal_cliques)
     best_combo = find_least_overlap_tuple(all_combinations)
     overlap_percentage, _ = calculate_overlap(best_combo)
