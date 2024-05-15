@@ -58,13 +58,13 @@ def main():
     df = pd.DataFrame(D)
     features = df[['X', 'Y', 'Z']]
     features['X_f1'] = features['X'] < 3
-    features['X_f2'] = features['X'] <= 6
+    features['X_f2'] = (features['X'] >= 3) & (features['X'] <= 6)
     features['X_f3'] = features['X'] >= 7
     features['Y_f1'] = features['Y'] < 3
-    features['Y_f2'] = features['Y'] <= 6
+    features['Y_f2'] = (features['Y'] >= 3) & (features['Y'] <= 6)
     features['Y_f3'] = features['Y'] >= 7
     features['Z_f1'] = features['Z'] < 3
-    features['Z_f2'] = features['Z'] <= 6
+    features['Z_f2'] = (features['Z'] >= 3) & (features['Z'] <= 6)
     features['Z_f3'] = features['Z'] >= 7
     labels = df['class']
 
@@ -96,7 +96,7 @@ def main():
     testing_df['predicted_class'] = prediction
     print(testing_df)
 
-    plt.figure(figsize=(7, 8))
+    plt.figure(figsize=(12, 8))
     plot_tree(model, filled=True, feature_names=features.columns, class_names=["1", "2", "3"])
     plt.title("Decision Tree Visualization")
     file_path = os.path.join(args.results_path, "decision_tree.png")
