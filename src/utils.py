@@ -9,6 +9,10 @@ def randNum(lower=1, upper=10):
     number = random.randint(lower, upper)
     return number
 
+def construct_arithmetic_input(data):
+    x,y,z = data
+    return {"X":x, "Y":y, "Z":z}
+
 def arithmetic_input_sampler():
     A = randNum()
     B = randNum()
@@ -313,3 +317,24 @@ def visualize_connected_components(matrix, causal_model_family, title_label=''):
     plt.savefig(f'connected_component_visualization_{title_label}.png')
     plt.close()
     return maximal_cliques
+
+
+def get_average_iia_per_low_rank_dimension(n_layers, cm_id, task_results_path):
+    best_lrd = 0
+    best_average = 0
+
+    for lrd in [64, 128, 256, 768, 4608]:
+        sum_iia = 0
+        for layer in range(n_layers):
+            file_name = f'{cm_id}_report_layer_{layer}_tkn_{lrd}.json'
+            directory = os.path.join(task_results_path, f'results_{cm_id}')
+            file_path = os.path.join(directory, file_name)
+            with open(file_path, 'r') as json_file:
+                report_dict = json.load(json_file)
+                sum_iia += report_dict['accuracy']
+        average_iia = sum_iia / n_layers
+        if best_average < average_iia:
+            best_average = average_iia
+            best_lrd = lrd
+    
+    print(f'Best low_rank_dimension for model {cm_id} is {best_lrd} with an iia average of {best_average}')
