@@ -441,6 +441,90 @@ class CausalModel:
                         count += 1
             return examples
 
+    def generate_fixed_counterfactuals(
+        self,
+        base,
+        source,
+        intervention_id,
+        sampler=None,
+        intervention_sampler=None,
+        filter=None,
+        device="cpu",
+        inputFunction=None,
+        outputFunction=None
+    ):
+        maxlength = len(
+            [
+                var
+                for var in self.variables
+                if var not in self.inputs and var not in self.outputs
+            ]
+        )
+        if inputFunction is None:
+            inputFunction = self.input_to_tensor
+        if outputFunction is None:
+            outputFunction = self.output_to_tensor
+        if sampler is None:
+            sampler = self.sample_input
+        if intervention_sampler is None:
+            intervention_sampler = self.sample_intervention
+        examples = {}
+        intervention = intervention_sampler()
+
+        if filter is None or filter(intervention):
+            example = dict()
+            sources = []
+            source_dic = {}
+            for var in self.variables:
+                if var not in intervention:
+                    continue
+                sources.append(inputFunction(source))
+                source_dic[var] = source
+            for _ in range(maxlength - len(sources)):
+                sources.append(torch.zeros(self.input_to_tensor(sampler()).shape))
+            example["labels"] = outputFunction(
+                self.run_interchange(base, source_dic)
+            ).to(device)
+            example["base_labels"] = outputFunction(
+                self.run_forward(base)
+            ).to(device)
+            example["input_ids"] = inputFunction(base).to(device)
+            example["source_input_ids"] = torch.stack(sources).to(device)
+            example["intervention_id"] = torch.tensor(
+                [intervention_id(intervention)]
+            ).to(device)
+            examples['base_source'] = example
+        
+        source_copy = source
+        source = base
+        base = source_copy
+
+        if filter is None or filter(intervention):
+            example = dict()
+            sources = []
+            source_dic = {}
+            for var in self.variables:
+                if var not in intervention:
+                    continue
+                sources.append(inputFunction(source))
+                source_dic[var] = source
+            for _ in range(maxlength - len(sources)):
+                sources.append(torch.zeros(self.input_to_tensor(sampler()).shape))
+            example["labels"] = outputFunction(
+                self.run_interchange(base, source_dic)
+            ).to(device)
+            example["base_labels"] = outputFunction(
+                self.run_forward(base)
+            ).to(device)
+            example["input_ids"] = inputFunction(base).to(device)
+            example["source_input_ids"] = torch.stack(sources).to(device)
+            example["intervention_id"] = torch.tensor(
+                [intervention_id(intervention)]
+            ).to(device)
+            examples['source_base'] = example
+
+        return examples
+
 
 def simple_example():
     variables = ["A", "B", "C"]
