@@ -73,6 +73,33 @@ def tokenizePrompt(input):
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
+def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, min_class_value=3):
+    # eval on all data
+    eval_labels = []
+    eval_preds = []
+    with torch.no_grad():
+        epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
+        for step, inputs in enumerate(epoch_iterator):
+            for k, v in inputs.items():
+                if v is not None and isinstance(v, torch.Tensor):
+                    inputs[k] = v.to("cuda")
+            inputs["input_ids"] = inputs["input_ids"].squeeze()
+            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
+            b_s = inputs["input_ids"].shape[0]
+            _, counterfactual_outputs = intervenable(
+                {"input_ids": inputs["input_ids"]},
+                [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                {"sources->base": [0,1,2,3,4,5]},
+                subspaces=[
+                    [[_ for _ in range(low_rank_dimension)]] * batch_size
+                ]
+            )
+
+            eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
+            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+    return report
+
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
@@ -227,30 +254,7 @@ def main():
                         inputFunction=tokenizePrompt
                     )
 
-                    eval_labels = []
-                    eval_preds = []
-                    with torch.no_grad():
-                        epoch_iterator = tqdm(DataLoader(testing_counterfactual_data, args.batch_size), desc=f"Test")
-                        for step, inputs in enumerate(epoch_iterator):
-                            for k, v in inputs.items():
-                                if v is not None and isinstance(v, torch.Tensor):
-                                    inputs[k] = v.to("cuda")
-
-                            inputs["input_ids"] = inputs["input_ids"].squeeze()
-                            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-                            b_s = inputs["input_ids"].shape[0]
-                            _, counterfactual_outputs = intervenable(
-                                {"input_ids": inputs["input_ids"]},
-                                [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                                {"sources->base": [0,1,2,3,4,5]},
-                                subspaces=[
-                                    [[_ for _ in range(low_rank_dimension)]] * args.batch_size
-                                ]
-                            )
-
-                            eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
-                            eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
-                    report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
+                    report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
         
         for experiment_id in [64, 128, 256, 768, 4608]:

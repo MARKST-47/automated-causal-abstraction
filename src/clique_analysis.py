@@ -56,7 +56,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     # parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
-    parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='disentangling_results/', help='path to the results folder')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
@@ -67,11 +67,8 @@ def main():
         raise argparse.ArgumentTypeError("Invalid results_path. Path does not exist.")
 
     # load labelled graph
-    # graph_path = os.path.join(args.results_path, 'graph.pt')
-    # graph = torch.load(graph_path)
-
-    # graph for testing
-    graph = generate_random_graph(size=6)
+    graph_path = os.path.join(args.results_path, 'arithmetic/graphs/graph_0.pt')
+    graph = torch.load(graph_path)
     
     set_seed(args.seed)
     
@@ -144,18 +141,6 @@ def main():
             font_size=8,
             ax=axes[i]
         )
-
-        # highlight cliques with these colors
-        # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'lime'] # len is 7
-        
-        # for j, clique in enumerate(cliques):
-        #     nx.draw_networkx_nodes(
-        #         subgraph,
-        #         pos,
-        #         nodelist=clique, 
-        #         node_color=colors[j % len(colors)], # so we kinda have different colors
-        #         ax=axes[i]
-        #     )
 
         axes[i].axis('off')
         axes[i].set_title(f"All connected edges with label {label}")
