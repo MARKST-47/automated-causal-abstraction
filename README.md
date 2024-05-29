@@ -97,3 +97,22 @@ We want to check where each variable lives when we use intervenable variables wh
 python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --results_path disentangling_results/ --experiment empirical
 ```
 
+## Disentangling causal models
+
+Run the following command to obtain 36 graphs weighted by the IIA between any two data points:
+
+```
+python3 disentangle_causal_models.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --results_path disentangling_results/ --causal_model_type arithmetic
+```
+
+## Clique analysis
+
+Run the following command to analyise the cliques in the graphs obtained previously:
+
+```
+python3 disentangle_causal_models.py --results_path disentangling_results/ --causal_model_type arithmetic
+```
+
+## Classification of new data points
+
+Loading..
