@@ -102,7 +102,7 @@ def main():
     G = {}
 
     low_rank_dimension = args.low_rank_dim
-    numbers = range(1, 3)
+    numbers = range(1, 11)
     repeat = 3
     graph_size = len(numbers) ** repeat
     
@@ -111,8 +111,8 @@ def main():
 
         G[cm_id] = {}
 
-        for layer in range(model_config.n_layer):
-        # for layer in [0]:
+        # for layer in range(model_config.n_layer):
+        for layer in [0]:
         
             intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
             intervenable = IntervenableModel.load(intervenable_model_path, model=model)
@@ -149,28 +149,30 @@ def main():
                     graph_encoding[j][i] = iia
                     
             G[cm_id][layer] = graph_encoding
+            graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{layer}.pt')
+            torch.save(graph_encoding, graph_path)
 
-    best_graphs = {}
-    for layer in range(model_config.n_layer):
-    # for layer in [0]:
-        best_graphs[layer] = torch.zeros(graph_size, graph_size)
+    # best_graphs = {}
+    # for layer in range(model_config.n_layer):
+    # # for layer in [0]:
+    #     best_graphs[layer] = torch.zeros(graph_size, graph_size)
 
-        for i in range(graph_size):
-            for j in range(graph_size):
-                    best_acc = 0
-                    best_model = 0
-                    for id, cm_accs in G.items():
-                        if cm_accs[layer][i][j] > best_acc:
-                            best_acc = cm_accs[layer][i][j]
-                            best_model = id
+    #     for i in range(graph_size):
+    #         for j in range(graph_size):
+    #                 best_acc = 0
+    #                 best_model = 0
+    #                 for id, cm_accs in G.items():
+    #                     if cm_accs[layer][i][j] > best_acc:
+    #                         best_acc = cm_accs[layer][i][j]
+    #                         best_model = id
 
-                    best_graphs[layer][i][j] = best_model
+    #                 best_graphs[layer][i][j] = best_model
     
-        # save graph
-        graph_path = os.path.join(save_graphs_path, f'graph_{layer}.pt')
-        torch.save(best_graphs[layer], graph_path)
+    #     # save graph
+    #     graph_path = os.path.join(save_graphs_path, f'graph_{layer}.pt')
+    #     torch.save(best_graphs[layer], graph_path)
 
-    print(best_graphs)
+    # print(best_graphs)
 
 if __name__ =="__main__":
     main()
