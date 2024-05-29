@@ -49,15 +49,20 @@ python3 train_gpt2.py
 
 We define three possible graphs which can abstract the finetuned GPT2. They are represented in the below graphs, where `P` is the variable summing each pair of two variables. We refer to these graphs as the _arithmetic_ ones.
 
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X+Y)+Z.png)
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X+Z)+Y.png)
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+(Y+Z).png)
+<div style="display: flex; justify-content: space-around;">  
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X+Y)+Z.png" width="200" />
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X+Z)+Y.png" width="200" />
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+(Y+Z).png" width="200" />
+</div>
+
 
 We also define a _simple_ group of causal graphs, where each graph just copies in turns each input variable to an intervenable varibale.
 
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X)+Y+Z.png)
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+(Y)+Z.png)
-![](https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+Y+(Z).png)
+<div style="display: flex; justify-content: space-around;">  
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/(X)+Y+Z.png" width="200" />
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+(Y)+Z.png" width="200" />
+  <img src="https://raw.githubusercontent.com/maraPislar/LLM_causal_model_learning/main/results/imgs/X+Y+(Z).png" width="200" />
+</div>
 
 There is an intervenable model trained for each of the 12 layers of the LLM, targetting the subspace divided by each of the values in `[64, 128, 256, 768, 4608]`, referred as the low rank dimension. All tokens are targetted. 
 
