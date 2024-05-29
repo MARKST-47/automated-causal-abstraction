@@ -49,15 +49,15 @@ python3 train_gpt2.py
 
 We define three possible graphs which can abstract the finetuned GPT2. They are represented in the below graphs, where `P` is the variable summing each pair of two variables. We refer to these graphs as the _arithmetic_ ones.
 
-![](src/imgs/(X+Y)+Z.png)
-![](src/imgs/(X+Z)+Y.png)
-![](src/imgs/X+(Y+Z).png)
+![](/LLM_causal_model_learning/results/imgs/(X+Y)+Z.png)
+![](/LLM_causal_model_learning/results/imgs/(X+Z)+Y.png)
+![](/LLM_causal_model_learning/results/imgs/X+(Y+Z).png)
 
 We also define a _simple_ group of causal graphs, where each graph just copies in turns each input variable to an intervenable varibale.
 
-![](src/imgs/(X)+Y+Z.png)
-![](src/imgs/X+(Y)+Z.png)
-![](src/imgs/X+Y+(Z).png)
+![](/LLM_causal_model_learning/results/imgs/(X)+Y+Z.png)
+![](/LLM_causal_model_learning/results/imgs/X+(Y)+Z.png)
+![](/LLM_causal_model_learning/results/imgs/X+Y+(Z).png)
 
 There is an intervenable model trained for each of the 12 layers of the LLM, targetting the subspace divided by each of the values in `[64, 128, 256, 768, 4608]`, referred as the low rank dimension. All tokens are targetted. 
 
