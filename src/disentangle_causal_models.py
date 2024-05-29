@@ -102,7 +102,7 @@ def main():
     G = {}
 
     low_rank_dimension = args.low_rank_dim
-    numbers = range(1, 11)
+    numbers = range(1, 3)
     repeat = 3
     graph_size = len(numbers) ** repeat
     
@@ -120,20 +120,20 @@ def main():
             intervenable.disable_model_gradients()
             intervenable.model.eval()
 
-            # numbers = range(1, 11)
-            arrangements_x = product(numbers, repeat=repeat)
+            arrangements = list(product(numbers, repeat=repeat))
 
             # initialize graph weighted by accuracies
             graph_encoding = torch.zeros(graph_size, graph_size)
+            tokenized_cache = {}
 
-            for i, base in enumerate(arrangements_x):
+            for i, base in enumerate(arrangements):
                 base = construct_arithmetic_input(base)
-                # numbers = range(1, 11)
-                arrangements_y = product(numbers, repeat=repeat)
-                for j, source in enumerate(arrangements_y):
-                    
-                    if i <= j:
-                        continue
+                for j, source in enumerate(arrangements[i + 1:]):
+
+                    if base not in tokenized_cache:
+                        tokenized_cache[base] = tokenizePrompt(base)
+                    if source not in tokenized_cache:
+                        tokenized_cache[source] = tokenizePrompt(source)
                     
                     source = construct_arithmetic_input(source)
                     data = model_info['causal_model'].generate_counterfactual_pairs(
@@ -141,7 +141,7 @@ def main():
                         source,
                         intervention_id,
                         device="cuda:0",
-                        inputFunction=tokenizePrompt
+                        inputFunction=lambda x: tokenized_cache[x]
                     )
 
                     iia = eval_one_point(intervenable, data, low_rank_dimension)
@@ -151,28 +151,6 @@ def main():
             G[cm_id][layer] = graph_encoding
             graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{layer}.pt')
             torch.save(graph_encoding, graph_path)
-
-    # best_graphs = {}
-    # for layer in range(model_config.n_layer):
-    # # for layer in [0]:
-    #     best_graphs[layer] = torch.zeros(graph_size, graph_size)
-
-    #     for i in range(graph_size):
-    #         for j in range(graph_size):
-    #                 best_acc = 0
-    #                 best_model = 0
-    #                 for id, cm_accs in G.items():
-    #                     if cm_accs[layer][i][j] > best_acc:
-    #                         best_acc = cm_accs[layer][i][j]
-    #                         best_model = id
-
-    #                 best_graphs[layer][i][j] = best_model
-    
-    #     # save graph
-    #     graph_path = os.path.join(save_graphs_path, f'graph_{layer}.pt')
-    #     torch.save(best_graphs[layer], graph_path)
-
-    # print(best_graphs)
 
 if __name__ =="__main__":
     main()

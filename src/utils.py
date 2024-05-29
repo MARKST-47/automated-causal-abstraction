@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.cm import ScalarMappable
+import torch
 
 def randNum(lower=1, upper=10):
     number = random.randint(lower, upper)
@@ -37,13 +38,9 @@ def save_results(results_path, report, layer, exp_id, train_id, test_id):
     with open(full_path, 'w') as json_file:
         json.dump(report, json_file)
 
-def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family, causal_model_type='arithmetic'):
+def sanity_check_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family):
             
     for test_id, model_info in arithmetic_family.causal_models.items():
-
-        if causal_model_type == 'simple':
-            if test_id != train_id:
-                continue
         
         label = model_info['label']
 
@@ -68,6 +65,40 @@ def visualize_per_trained_model(results_path, save_dir_path, n_layers, train_id,
         plt.ylabel('IIA')
 
     plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {arithmetic_family.get_label_by_id(train_id)}')
+    plt.rcParams.update({'figure.autolayout': True})
+    plt.legend()
+    plt.tight_layout()
+    
+    save_file_name = f'{train_id}_IIA_per_layer_targeting_[0,1,2,3,4,5]_{experiment_id}.png'
+    file_path = os.path.join(save_dir_path, save_file_name)
+    plt.savefig(file_path)
+    plt.close()
+
+def empirical_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, label):
+
+    # label = arithmetic_family.get_label_by_id(train_id)
+
+    cm = []
+    report_dicts = []
+
+    for layer in range(n_layers):
+        file_name = f'{train_id}_report_layer_{layer}_tkn_{experiment_id}.json'
+        directory = os.path.join(results_path, f'results_{train_id}')
+        file_path = os.path.join(directory, file_name)
+        with open(file_path, 'r') as json_file:
+            report_dict = json.load(json_file)
+            report_dicts.append(report_dict)
+
+    for layer, report_dict in enumerate(report_dicts, start=1):
+        cm.append(report_dict['accuracy'])
+    
+    plt.scatter(range(n_layers), cm)
+    plt.plot(range(n_layers), cm, label=label)
+    plt.xticks(range(int(min(plt.xticks()[0])), int(max(plt.xticks()[0])) + 1))
+    plt.xlabel('layer')
+    plt.ylabel('IIA')
+
+    plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {label}')
     plt.rcParams.update({'figure.autolayout': True})
     plt.legend()
     plt.tight_layout()
@@ -128,3 +159,25 @@ def get_average_iia_per_low_rank_dimension(n_layers, cm_id, task_results_path):
             best_lrd = lrd
     
     print(f'Best low_rank_dimension for model {cm_id} is {best_lrd} with an iia average of {best_average}')
+
+
+def merge_iia_graphs(n_layers, graph_size, save_graphs_path):
+    best_graphs = {}
+    for layer in range(n_layers):
+    # for layer in [0]:
+        best_graphs[layer] = torch.zeros(graph_size, graph_size)
+
+        for i in range(graph_size):
+            for j in range(graph_size):
+                    best_acc = 0
+                    best_model = 0
+                    for id, cm_accs in G.items():
+                        if cm_accs[layer][i][j] > best_acc:
+                            best_acc = cm_accs[layer][i][j]
+                            best_model = id
+
+                    best_graphs[layer][i][j] = best_model
+    
+        # save graph
+        graph_path = os.path.join(save_graphs_path, f'graph_{layer}.pt')
+        torch.save(best_graphs[layer], graph_path)

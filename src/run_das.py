@@ -10,7 +10,7 @@ from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results,visualize_per_trained_model
+from utils import arithmetic_input_sampler, save_results, visualize_per_trained_model
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
@@ -257,8 +257,8 @@ def main():
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
         
-        for experiment_id in [64, 128, 256, 768, 4608]:
-            visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)
+        # for experiment_id in [64, 128, 256, 768, 4608]:
+        #     visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)
 
 if __name__ =="__main__":
     main()

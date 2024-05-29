@@ -116,7 +116,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default='gpt2', help='model to finetune on the task')
     parser.add_argument('--results_path', type=str, default='training_gpt2_results/', help='path to the results folder')
-    parser.add_argumnet('--epochs', type=int, default=50, help='epochs number for training')
+    parser.add_argument('--epochs', type=int, default=50, help='epochs number for training')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--seed', type=int, default=123, help='experiment seed to be able to reproduce the results')
