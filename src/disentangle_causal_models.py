@@ -26,8 +26,7 @@ def intervention_id(intervention):
     if "P" in intervention:
         return 0
     
-def tokenizePrompt(input):
-    tokenizer = load_tokenizer("gpt2")
+def tokenizePrompt(input, tokenizer):
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
@@ -38,10 +37,6 @@ def eval_one_point(intervenable, data, low_rank_dimension, min_class_value=3):
     with torch.no_grad():
         for input_key in ["base_source", "source_base"]:
             inputs = data[input_key]
-
-            for k, v in inputs.items():
-                if isinstance(v, torch.Tensor):
-                    inputs[k] = v.cuda()
 
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
@@ -64,8 +59,9 @@ def main():
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--results_path', type=str, default='disentangling_results/', help='path to the results folder')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
-    parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     parser.add_argument('--low_rank_dim', type=int, default=256, help='low rank dimension for rotation intervention')
+    parser.add_argument('--layer', type=int, default=0, help='layer on which to evaluate')
+    parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     parser.add_argument('--n_runs', type=int, default=1, help='number of runs before obtaining the graph')
     args = parser.parse_args()
 
@@ -99,58 +95,58 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
 
-    G = {}
-
     low_rank_dimension = args.low_rank_dim
     numbers = range(1, 3)
     repeat = 3
     graph_size = len(numbers) ** repeat
+    arrangements = list(product(numbers, repeat=repeat))
+
+    print('Tokenizing and caching...')
+
+    tokenized_cache = {}
+    for arrangement in arrangements:
+        tokenized_cache[arrangement] = tokenizePrompt(construct_arithmetic_input(arrangement), tokenizer)
     
+
+    print('Generating every pair of counterfactual data and caching...')
+
+    cached_data = {}
+
+    for i, base in enumerate(arrangements):
+        base = construct_arithmetic_input(base)
+        for j, source in enumerate(arrangements[i + 1:]):
+            source = construct_arithmetic_input(source)
+            
+            data = model_info['causal_model'].generate_counterfactual_pairs(
+                base,
+                source,
+                intervention_id,
+                device="cuda:0",
+                inputFunction=lambda x: tokenized_cache[tuple(x.values())]
+            )
+
+            cached_data[(i, j + i + 1)] = data
+
+    print('Constructing the graphs..')
     # loop through the family of causal models
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
-        G[cm_id] = {}
+        print('loading intervenable model')
+        intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{args.layer}')
+        intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+        intervenable.set_device("cuda")
+        intervenable.disable_model_gradients()
 
-        # for layer in range(model_config.n_layer):
-        for layer in [0]:
-        
-            intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
-            intervenable = IntervenableModel.load(intervenable_model_path, model=model)
-            intervenable.set_device("cuda")
-            intervenable.disable_model_gradients()
-            intervenable.model.eval()
+        graph_encoding = torch.zeros(graph_size, graph_size)
 
-            arrangements = list(product(numbers, repeat=repeat))
+        print(f'..constructing graph {cm_id}..')
+        for (i, j), data in cached_data.items():
+            iia = eval_one_point(intervenable, data, low_rank_dimension)
+            graph_encoding[i][j] = iia
+            graph_encoding[j][i] = iia
 
-            # initialize graph weighted by accuracies
-            graph_encoding = torch.zeros(graph_size, graph_size)
-            tokenized_cache = {}
-
-            for i, base in enumerate(arrangements):
-                base = construct_arithmetic_input(base)
-                for j, source in enumerate(arrangements[i + 1:]):
-
-                    if base not in tokenized_cache:
-                        tokenized_cache[base] = tokenizePrompt(base)
-                    if source not in tokenized_cache:
-                        tokenized_cache[source] = tokenizePrompt(source)
-                    
-                    source = construct_arithmetic_input(source)
-                    data = model_info['causal_model'].generate_counterfactual_pairs(
-                        base,
-                        source,
-                        intervention_id,
-                        device="cuda:0",
-                        inputFunction=lambda x: tokenized_cache[x]
-                    )
-
-                    iia = eval_one_point(intervenable, data, low_rank_dimension)
-                    graph_encoding[i][j] = iia
-                    graph_encoding[j][i] = iia
-                    
-            G[cm_id][layer] = graph_encoding
-            graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{layer}.pt')
-            torch.save(graph_encoding, graph_path)
+        graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{args.layer}.pt')
+        torch.save(graph_encoding, graph_path)
 
 if __name__ =="__main__":
     main()
