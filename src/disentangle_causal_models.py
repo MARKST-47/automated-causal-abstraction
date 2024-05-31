@@ -96,7 +96,7 @@ def main():
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
 
     low_rank_dimension = args.low_rank_dim
-    numbers = range(1, 3)
+    numbers = range(1, 4)
     repeat = 3
     graph_size = len(numbers) ** repeat
     arrangements = list(product(numbers, repeat=repeat))
@@ -106,26 +106,6 @@ def main():
     tokenized_cache = {}
     for arrangement in arrangements:
         tokenized_cache[arrangement] = tokenizePrompt(construct_arithmetic_input(arrangement), tokenizer)
-    
-
-    print('Generating every pair of counterfactual data and caching...')
-
-    cached_data = {}
-
-    for i, base in enumerate(arrangements):
-        base = construct_arithmetic_input(base)
-        for j, source in enumerate(arrangements[i + 1:]):
-            source = construct_arithmetic_input(source)
-            
-            data = model_info['causal_model'].generate_counterfactual_pairs(
-                base,
-                source,
-                intervention_id,
-                device="cuda:0",
-                inputFunction=lambda x: tokenized_cache[tuple(x.values())]
-            )
-
-            cached_data[(i, j + i + 1)] = data
 
     print('Constructing the graphs..')
     # loop through the family of causal models
@@ -140,10 +120,23 @@ def main():
         graph_encoding = torch.zeros(graph_size, graph_size)
 
         print(f'..constructing graph {cm_id}..')
-        for (i, j), data in cached_data.items():
-            iia = eval_one_point(intervenable, data, low_rank_dimension)
-            graph_encoding[i][j] = iia
-            graph_encoding[j][i] = iia
+
+        for i, base in enumerate(arrangements):
+            base = construct_arithmetic_input(base)
+            for j, source in enumerate(arrangements[i + 1:]):
+                source = construct_arithmetic_input(source)
+                
+                data = model_info['causal_model'].generate_counterfactual_pairs(
+                    base,
+                    source,
+                    intervention_id,
+                    device="cuda:0",
+                    inputFunction=lambda x: tokenized_cache[tuple(x.values())]
+                )
+                
+                iia = eval_one_point(intervenable, data, low_rank_dimension)
+                graph_encoding[i][j] = iia
+                graph_encoding[j][i] = iia
 
         graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{args.layer}.pt')
         torch.save(graph_encoding, graph_path)
