@@ -70,23 +70,19 @@ def main():
         
         low_rank_dimension = 256
         layer = 0
-        cm_id = 2
+        cm_id = 3
         intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
         intervenable = IntervenableModel.load(intervenable_model_path, model=model)
         intervenable.set_device("cuda")
 
-        print('here')
-
         for k, v in intervenable.interventions.items():
-
-            print('here')
 
             rotation_token_heatmap(v[0].rotate_layer.cpu(), 
                                 tokens = ['X', '+', 'Y', '+', 'Z', '='], 
                                 token_size = 6, 
-                                variables = ['X+Z'], 
+                                variables = ['Y+Z'], 
                                 intervention_size = 1,
-                                fig_name=f'X+Z_{k}')
+                                fig_name=f'Y+Z_{k}')
 
 if __name__ =="__main__":
     main()
