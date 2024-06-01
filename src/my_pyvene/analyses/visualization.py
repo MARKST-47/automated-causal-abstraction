@@ -8,7 +8,7 @@ def rotation_token_heatmap(rotate_layer,
                            token_size, 
                            variables, 
                            intervention_size,
-                           fig_name=''):
+                           fig_path=''):
 
     W = rotate_layer.weight.data
     in_dim, out_dim = W.shape
@@ -30,7 +30,8 @@ def rotation_token_heatmap(rotate_layer,
     heatmap_fig = seaborn.heatmap(heatmap, 
                        xticklabels=tokens, 
                        yticklabels=variables)
-    if fig_name != '':
-        plt.savefig(f'{fig_name}.png')
+    if fig_path != '':
+        plt.savefig(fig_path)
+        plt.close()
 
     return heatmap_fig
