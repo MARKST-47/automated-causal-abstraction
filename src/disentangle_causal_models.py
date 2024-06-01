@@ -96,7 +96,7 @@ def main():
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
 
     low_rank_dimension = args.low_rank_dim
-    numbers = range(1, 5)
+    numbers = range(1, 6)
     repeat = 3
     graph_size = len(numbers) ** repeat
     arrangements = list(product(numbers, repeat=repeat))
@@ -138,7 +138,9 @@ def main():
                 graph_encoding[i][j] = iia
                 graph_encoding[j][i] = iia
 
-        graph_path = os.path.join(save_graphs_path, f'graph_{cm_id}_{args.layer}.pt')
+        graph_path = os.path.join(save_graphs_path, f'cm_{cm_id}')
+        os.makedirs(graph_path, exist_ok=True)
+        graph_path = os.path.join(graph_path, f'graph_{low_rank_dimension}_{args.layer}.pt')
         torch.save(graph_encoding, graph_path)
 
 if __name__ =="__main__":
