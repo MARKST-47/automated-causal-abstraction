@@ -22,15 +22,13 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
-    parser.add_argument('--results_path', type=str, default='disentangling_results/', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--experiment', type=str, choices=['sanity_check', 'empirical', 'attention_weights', 'show_causal_models'])
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
-    parser.add_argument('--low_rank_dim', type=int, default=256, help='low rank dimension for rotation intervention')
-    # parser.add_argument('--n_runs', type=int, default=1, help='number of runs before obtaining the graph')
     args = parser.parse_args()
 
-    save_dir_path = os.path.join(args.results_path, 'plots_2')
+    save_dir_path = os.path.join(args.results_path, 'plots')
     os.makedirs(save_dir_path, exist_ok=True)
 
     args.results_path = os.path.join(args.results_path, args.causal_model_type)
@@ -67,22 +65,32 @@ def main():
             for experiment_id in [64, 128, 256, 768, 4608]:
                 empirical_visualization(args.results_path, save_dir_path, model_config.n_layer, cm_id, experiment_id, model_info['label'])
     elif args.experiment == 'attention_weights':
+
+        dir_path = os.path.join(args.results_path, 'intervenable_models_plots')
+        os.makedirs(dir_path, exist_ok=True)
+
+        hardcode_labels = ['X+Y', 'X+Z', 'Y+Z']
         
-        low_rank_dimension = 256
-        layer = 0
-        cm_id = 3
-        intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
-        intervenable = IntervenableModel.load(intervenable_model_path, model=model)
-        intervenable.set_device("cuda")
+        for low_rank_dimension in [64, 128, 256]:
 
-        for k, v in intervenable.interventions.items():
+            lrd_path = os.path.join(dir_path, f'{low_rank_dimension}')
+            os.makedirs(lrd_path, exist_ok=True)
 
-            rotation_token_heatmap(v[0].rotate_layer.cpu(), 
-                                tokens = ['X', '+', 'Y', '+', 'Z', '='], 
-                                token_size = 6, 
-                                variables = ['Y+Z'], 
-                                intervention_size = 1,
-                                fig_name=f'Y+Z_{k}')
+            for layer in range(12):
+                for cm_id, model_info in arithmetic_family.causal_models.items():
+
+                        intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
+                        intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+                        intervenable.set_device("cuda")
+
+                        for k, v in intervenable.interventions.items():
+                            path = os.path.join(lrd_path, f'{model_info["label"]}_{low_rank_dimension}_{k}.png')
+                            rotation_token_heatmap(v[0].rotate_layer.cpu(),
+                                                tokens = ['X', '+', 'Y', '+', 'Z', '='], 
+                                                token_size = 6, 
+                                                variables = [hardcode_labels[cm_id - 1]], 
+                                                intervention_size = 1,
+                                                fig_path=path)
 
 if __name__ =="__main__":
     main()
