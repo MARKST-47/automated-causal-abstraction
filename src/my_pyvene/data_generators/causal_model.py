@@ -112,7 +112,7 @@ class CausalModel:
     def marginalize(self, target):
         pass
 
-    def print_structure(self, pos=None):
+    def print_structure(self, pos=None, fig_name=''):
         G = nx.DiGraph()
         G.add_edges_from(
             [
@@ -121,9 +121,13 @@ class CausalModel:
                 for parent in self.parents[child]
             ]
         )
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(3, 3))
         nx.draw_networkx(G, with_labels=True, node_color="green", pos=self.pos)
-        plt.show()
+        if fig_name != '':
+            plt.savefig(f'{fig_name}.png')
+            plt.close()
+        else:
+            plt.show()
 
     def find_live_paths(self, intervention):
         actual_setting = self.run_forward(intervention)
