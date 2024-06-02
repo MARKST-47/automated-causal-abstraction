@@ -96,7 +96,7 @@ def main():
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
 
     low_rank_dimension = args.low_rank_dim
-    numbers = range(1, 6)
+    numbers = range(1, 11)
     repeat = 3
     graph_size = len(numbers) ** repeat
     arrangements = list(product(numbers, repeat=repeat))
