@@ -41,18 +41,18 @@ def main():
     os.makedirs(save_models_path, exist_ok=True)
 
     # get all the arrangements
-    numbers = range(1, 6)
+    numbers = range(1, 11)
     arrangements = list(product(numbers, repeat=3))
 
     set_seed(args.seed)
-
-    D = []
 
     # construct dataset
     for cm_id, model_info in arithmetic_family.causal_models.items():
         data_path = os.path.join(args.results_path, f'classification_data/{args.low_rank_dimension}/data_{cm_id}_{args.layer}.pkl')
         with open(data_path, 'rb') as file:
             data_ids = pickle.load(file)
+        
+        D = []
         
         # construct positive inputs
         for id in data_ids:
