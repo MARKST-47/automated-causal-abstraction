@@ -9,7 +9,7 @@ from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 import networkx as nx
 from utils import filter_by_max_length
 from networkx.readwrite import json_graph
-from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder
+from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic
 
 def main():
     
@@ -45,14 +45,15 @@ def main():
 
     # clique_finder = BranchAndBoundHeuristic(time=60)
     # clique_finder = ExhaustiveCliqueFinder()
-    clique_finder = DegreeHeuristic()
+    # clique_finder = DegreeHeuristic()
+    clique_finder = MaxCliqueHeuristic()
 
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
         cliques_info[cm_id] = {}
 
         print(f'Loading graph {cm_id}..')
-        graph_path = os.path.join(args.results_path, f'graphs/cm_{cm_id}/graph_{args.low_rank_dimension}_{args.layer}.pt')
+        graph_path = os.path.join(args.results_path, f'graphs_big/cm_{cm_id}/graph_{args.low_rank_dimension}_{args.layer}.pt')
         graph = torch.load(graph_path)
         mask = (graph == 1).float()
         graph = graph * mask

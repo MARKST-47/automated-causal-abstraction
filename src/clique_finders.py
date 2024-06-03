@@ -18,6 +18,7 @@ class CliqueAnalysers(ABC):
     def get_max_cliques(self, G):
         pass
 
+# Bron and Kerbosch algorithm for finding all maximal cliques, iterative version
 class ExhaustiveCliqueFinder(CliqueAnalysers):
     def __init__(self):
         super().__init__()
@@ -154,3 +155,10 @@ class BranchAndBoundHeuristic(CliqueAnalysers):
         except TimeoutException:
             print("Timed out!")
             sys.exit(0)
+
+class MaxCliqueHeuristic(CliqueAnalysers):
+    def __init__(self):
+        super().__init__()
+    
+    def get_max_cliques(self, G):
+        return [list(nx.approximation.max_clique(G))]
