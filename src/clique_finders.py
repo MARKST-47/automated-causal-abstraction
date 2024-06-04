@@ -1,4 +1,3 @@
-import os
 import sys
 import threading
 from contextlib import contextmanager
@@ -6,6 +5,7 @@ import _thread
 import time
 import networkx as nx
 from abc import ABC, abstractmethod
+import networkit as nk
 
 class TimeoutException(Exception):
         pass
@@ -162,3 +162,13 @@ class MaxCliqueHeuristic(CliqueAnalysers):
     
     def get_max_cliques(self, G):
         return [list(nx.approximation.max_clique(G))]
+    
+class MaxCliqueHeuristic_v2(CliqueAnalysers):
+    def __init__(self):
+        super().__init__()
+    
+    def get_max_cliques(self, G):
+        nk_graph = nk.nxadapter.nx2nk(G)
+        clique_finder = nk.clique.MaximalCliques(nk_graph, maximumOnly=True)
+        clique_finder.run()
+        return clique_finder.getCliques()

@@ -9,7 +9,11 @@ from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 import networkx as nx
 from utils import filter_by_max_length
 from networkx.readwrite import json_graph
-from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic
+from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic, MaxCliqueHeuristic_v2
+
+def pairwise_node_overlap(G1, G2):
+    """Calculates the number of overlapping nodes between two NetworkX graphs."""
+    return len(set(G1.nodes()) & set(G2.nodes()))
 
 def main():
     
@@ -47,6 +51,7 @@ def main():
     # clique_finder = ExhaustiveCliqueFinder()
     # clique_finder = DegreeHeuristic()
     clique_finder = MaxCliqueHeuristic()
+    # clique_finder = MaxCliqueHeuristic_v2() # good for sparse graphs. We don't have sparse graphs here
 
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
@@ -61,6 +66,14 @@ def main():
 
         print('Constructing graph..')
         G = nx.from_numpy_array(graph.numpy())
+
+        # analyse graphs
+        graph_density = nx.density(G)
+        avg_degree = sum(dict(G.degree()).values()) / G.number_of_nodes()
+
+        # if average degree is much smaller than the number of nodes, it's likely a sparse graph
+        print(f'Graph density: {graph_density}')
+        print(f'Average node degree: {avg_degree}')
 
         print('Finding cliques..')
 
@@ -94,6 +107,23 @@ def main():
         
     with open(temp_path, 'w') as file:
         json.dump(cliques_info, file)
+
+    # temp_path = os.path.join(cliques_info_path, f'{args.low_rank_dimension}')
+    # os.makedirs(temp_path, exist_ok=True)
+    # temp_path = os.path.join(temp_path, f'layer_{args.layer}.json')
+        
+    # with open(temp_path, 'r') as file:
+    #     cliques_info = json.load(file)
+    
+    print('Overlap analysis')
+    for cm_id1, model_info in arithmetic_family.causal_models.items():
+        G_subgraph1 = json_graph.node_link_graph(cliques_info[cm_id1]['cliques_subgraph'])
+        for cm_id2, model_info2 in arithmetic_family.causal_models.items():
+            if cm_id1 < cm_id2:
+                G_subgraph2 = json_graph.node_link_graph(cliques_info[cm_id2]['cliques_subgraph'])
+                overlap = pairwise_node_overlap(G_subgraph1, G_subgraph2)
+                print(cm_id1, cm_id2)
+                print(overlap / G_subgraph1.number_of_nodes(), overlap / G_subgraph2.number_of_nodes())
 
 if __name__ =="__main__":
     main()
