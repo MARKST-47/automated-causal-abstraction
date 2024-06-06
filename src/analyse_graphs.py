@@ -9,7 +9,7 @@ from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 import networkx as nx
 from utils import filter_by_max_length
 from networkx.readwrite import json_graph
-from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic, MaxCliqueHeuristic_v2
+from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic, MaxCliqueHeuristic_v2, RemovalHeuristic
 
 def pairwise_node_overlap(G1, G2):
     """Calculates the number of overlapping nodes between two NetworkX graphs."""
@@ -50,11 +50,12 @@ def main():
     # clique_finder = BranchAndBoundHeuristic(time=60)
     # clique_finder = ExhaustiveCliqueFinder()
     # clique_finder = DegreeHeuristic()
-    clique_finder = MaxCliqueHeuristic()
+    # clique_finder = MaxCliqueHeuristic()
     # clique_finder = MaxCliqueHeuristic_v2() # good for sparse graphs. We don't have sparse graphs here
 
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
+        clique_finder = RemovalHeuristic()
         cliques_info[cm_id] = {}
 
         print(f'Loading graph {cm_id}..')
@@ -77,7 +78,8 @@ def main():
 
         print('Finding cliques..')
 
-        maximal_cliques[cm_id] = filter_by_max_length(clique_finder.get_max_cliques(G))
+        # maximal_cliques[cm_id] = filter_by_max_length(clique_finder.get_max_cliques(G))
+        maximal_cliques[cm_id] = clique_finder.get_max_cliques(G)
         
         max_clique_nodes = set(node for clique in maximal_cliques[cm_id] for node in clique)
 
@@ -86,7 +88,7 @@ def main():
         percentage_of_edges = G_subgraph.number_of_edges() / G.number_of_edges()
 
         cliques_info[cm_id]['number_of_max_len_cliques'] = len(maximal_cliques[cm_id])
-        cliques_info[cm_id]['clique_size'] = len(maximal_cliques[cm_id][0])
+        cliques_info[cm_id]['clique_sizes'] = [len(clique) for clique in maximal_cliques[cm_id]]
         cliques_info[cm_id]['number_of_unique_nodes_in_all_cliques'] = len(max_clique_nodes)
         cliques_info[cm_id]['nodes_percentage'] = len(max_clique_nodes) / len(graph)
         cliques_info[cm_id]['edge_percentage'] = percentage_of_edges
@@ -108,19 +110,15 @@ def main():
     with open(temp_path, 'w') as file:
         json.dump(cliques_info, file)
 
-    # temp_path = os.path.join(cliques_info_path, f'{args.low_rank_dimension}')
-    # os.makedirs(temp_path, exist_ok=True)
-    # temp_path = os.path.join(temp_path, f'layer_{args.layer}.json')
-        
-    # with open(temp_path, 'r') as file:
-    #     cliques_info = json.load(file)
+    with open(temp_path, 'r') as file:
+        cliques_info = json.load(file)
     
     print('Overlap analysis')
     for cm_id1, model_info in arithmetic_family.causal_models.items():
-        G_subgraph1 = json_graph.node_link_graph(cliques_info[cm_id1]['cliques_subgraph'])
+        G_subgraph1 = json_graph.node_link_graph(cliques_info[str(cm_id1)]['cliques_subgraph'])
         for cm_id2, model_info2 in arithmetic_family.causal_models.items():
             if cm_id1 < cm_id2:
-                G_subgraph2 = json_graph.node_link_graph(cliques_info[cm_id2]['cliques_subgraph'])
+                G_subgraph2 = json_graph.node_link_graph(cliques_info[str(cm_id2)]['cliques_subgraph'])
                 overlap = pairwise_node_overlap(G_subgraph1, G_subgraph2)
                 print(cm_id1, cm_id2)
                 print(overlap / G_subgraph1.number_of_nodes(), overlap / G_subgraph2.number_of_nodes())

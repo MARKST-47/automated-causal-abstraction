@@ -41,6 +41,26 @@ class DegreeHeuristic(CliqueAnalysers):
             self.cliques.append(clique)
 
         return self.cliques
+    
+class RemovalHeuristic(CliqueAnalysers):
+    def __init__(self):
+        super().__init__()
+
+    def get_max_cliques(self, G):
+
+        threshold = 5
+        G_copy = G
+        
+        while True:
+            max_clique = nx.approximation.max_clique(G)
+
+            if len(max_clique) < threshold:
+                break
+
+            self.cliques.append(list(max_clique))
+            G_copy.remove_nodes_from(max_clique)
+        
+        return self.cliques
 
 # https://github.com/donfaq/max_clique/blob/master/main.py#L94
 class BranchAndBoundHeuristic(CliqueAnalysers):
