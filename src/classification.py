@@ -98,11 +98,11 @@ def main():
     features['XYZ_sum'] = features['X'] + features['Y'] + features['Z']
 
     # divisible features --> they don't really make sense here honestly
-    # divisors = [3, 5, 7]
-    # for divisor in divisors:
-    #     features[f'X_divisible_by_{divisor}'] = features['X'] % divisor == 0
-    #     features[f'Y_divisible_by_{divisor}'] = features['Y'] % divisor == 0
-    #     features[f'Z_divisible_by_{divisor}'] = features['Z'] % divisor == 0
+    divisors = [3, 5, 7]
+    for divisor in divisors:
+        features[f'X_divisible_by_{divisor}'] = features['X'] % divisor == 0
+        features[f'Y_divisible_by_{divisor}'] = features['Y'] % divisor == 0
+        features[f'Z_divisible_by_{divisor}'] = features['Z'] % divisor == 0
 
     labels = df['class']
 
@@ -111,7 +111,7 @@ def main():
 
     print(f'Training size: {len(y_train)}')
     print(f'Testing size: {len(y_test)}')
-    
+
     # hyperparameter search
     # param_grid = {
     #     'criterion': ['gini', 'entropy'], 

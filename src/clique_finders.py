@@ -6,6 +6,7 @@ import time
 import networkx as nx
 from abc import ABC, abstractmethod
 import networkit as nk
+import copy
 
 class TimeoutException(Exception):
         pass
@@ -48,15 +49,15 @@ class RemovalHeuristic(CliqueAnalysers):
 
     def get_max_cliques(self, G):
 
-        threshold = 5
-        G_copy = G
+        G_copy = copy.deepcopy(G)
+        max_clique = nx.approximation.max_clique(G_copy)
+        self.cliques.append(list(max_clique))
+        threshold = len(max_clique) / 2
         
         while True:
-            max_clique = nx.approximation.max_clique(G)
-
+            max_clique = nx.approximation.max_clique(G_copy)
             if len(max_clique) < threshold:
                 break
-
             self.cliques.append(list(max_clique))
             G_copy.remove_nodes_from(max_clique)
         
