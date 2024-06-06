@@ -52,6 +52,7 @@ class RemovalHeuristic(CliqueAnalysers):
         G_copy = copy.deepcopy(G)
         max_clique = nx.approximation.max_clique(G_copy)
         self.cliques.append(list(max_clique))
+        G_copy.remove_nodes_from(max_clique)
         threshold = len(max_clique) / 2
         
         while True:
