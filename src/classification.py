@@ -76,15 +76,15 @@ def main():
     features = df[['X', 'Y', 'Z']]
 
     # interval features
-    features['X_f1'] = features['X'] < 3
-    features['X_f2'] = (features['X'] >= 3) & (features['X'] <= 6)
-    features['X_f3'] = features['X'] >= 7
-    features['Y_f1'] = features['Y'] < 3
-    features['Y_f2'] = (features['Y'] >= 3) & (features['Y'] <= 6)
-    features['Y_f3'] = features['Y'] >= 7
-    features['Z_f1'] = features['Z'] < 3
-    features['Z_f2'] = (features['Z'] >= 3) & (features['Z'] <= 6)
-    features['Z_f3'] = features['Z'] >= 7
+    # features['X_f1'] = features['X'] < 3
+    # features['X_f2'] = (features['X'] >= 3) & (features['X'] <= 6)
+    # features['X_f3'] = features['X'] >= 7
+    # features['Y_f1'] = features['Y'] < 3
+    # features['Y_f2'] = (features['Y'] >= 3) & (features['Y'] <= 6)
+    # features['Y_f3'] = features['Y'] >= 7
+    # features['Z_f1'] = features['Z'] < 3
+    # features['Z_f2'] = (features['Z'] >= 3) & (features['Z'] <= 6)
+    # features['Z_f3'] = features['Z'] >= 7
     
     # parity features
     features['X_even'] = features['X'] % 2 == 0
@@ -115,11 +115,11 @@ def main():
     # hyperparameter search
     param_grid = {
         'criterion': ['gini', 'entropy'], 
-        'max_depth': [1, 2, 3, 4, 5, 6, 7, 8, None],
-        'min_samples_split': [2, 3, 4, 5, 6, 7, 8, 9, 10],
-        'min_samples_leaf': [1, 2, 3, 4, 5],
-        'max_features': [None, 'sqrt', 'log2', 2, 3, 4, 5],
-        'ccp_alpha': [0.0, 0.001, 0.005, 0.015, 0.05, 0.1, 0.2]
+        'max_depth': [4],
+        'min_samples_split': [6, 7],
+        'min_samples_leaf': [4, 5],
+        'max_features': [None, 'sqrt', 'log2', 2, 3],
+        'ccp_alpha': [0.0]
     }
 
     # param_grid = {

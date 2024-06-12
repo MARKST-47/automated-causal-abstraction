@@ -168,6 +168,14 @@ class SimpleSummingCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="X+Y+(Z)")
 
+        parents = {
+            "X":[], "Y":[], "Z":[],
+            "P":["X", "Y", "Z"],
+            "O":["P"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="(X+Y+Z)")
+
 class RedundantSummingCausalModels(CausalModelFamily):
     def __init__(self):
         super().__init__()

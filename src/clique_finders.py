@@ -7,6 +7,7 @@ import networkx as nx
 from abc import ABC, abstractmethod
 import networkit as nk
 import copy
+from utils import filter_by_max_length
 
 class TimeoutException(Exception):
         pass
@@ -25,7 +26,7 @@ class ExhaustiveCliqueFinder(CliqueAnalysers):
         super().__init__()
     
     def get_max_cliques(self, G):
-        return list(nx.find_cliques(G))
+        return filter_by_max_length(list(nx.find_cliques(G)))
 
 class DegreeHeuristic(CliqueAnalysers):
     def __init__(self):
@@ -48,17 +49,13 @@ class RemovalHeuristic(CliqueAnalysers):
         super().__init__()
 
     def get_max_cliques(self, G):
-
         G_copy = copy.deepcopy(G)
-        max_clique = nx.approximation.max_clique(G_copy)
-        self.cliques.append(list(max_clique))
-        G_copy.remove_nodes_from(max_clique)
-        threshold = len(max_clique) / 2
+        p = G_copy.number_of_nodes()
+        threshold = 5
         
-        while True:
+        while threshold <= p:
             max_clique = nx.approximation.max_clique(G_copy)
-            if len(max_clique) < threshold:
-                break
+            p = len(max_clique)
             self.cliques.append(list(max_clique))
             G_copy.remove_nodes_from(max_clique)
         

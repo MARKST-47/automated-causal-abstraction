@@ -144,6 +144,9 @@ def main():
     
     for train_id, model_info in arithmetic_family.causal_models.items():
 
+        if train_id == 1 or train_id == 2 or train_id == 3:
+            continue
+
         print('generating data for DAS...')
 
         training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset(
@@ -155,7 +158,7 @@ def main():
             inputFunction=tokenizePrompt
         )
 
-        for low_rank_dimension in [64, 128, 256, 768, 4608]:
+        for low_rank_dimension in [64, 128, 256]:
             for layer in range(model_config.n_layer):
 
                 intervenable_config = IntervenableConfig({
