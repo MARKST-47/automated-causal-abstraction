@@ -107,10 +107,9 @@ def main():
     labels = df['class']
 
     # split data intro training and testing data
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+    X_train, y_train = features, labels
 
     print(f'Training size: {len(y_train)}')
-    print(f'Testing size: {len(y_test)}')
 
     # hyperparameter search
     param_grid = {
@@ -144,12 +143,12 @@ def main():
     print(results_df[['params', 'mean_test_score', 'std_test_score']].head().to_markdown(index=False,numalign='left', stralign='left'))
 
     # testing
-    prediction = model.predict(X_test)
-    testing_df = pd.DataFrame(X_test[['X', 'Y', 'Z']])
-    testing_df['true_class'] = y_test
-    testing_df['predicted_class'] = prediction
-    accuracy = (testing_df['true_class'] == testing_df['predicted_class']).mean()
-    print(f"Accuracy on layer {args.layer}: {accuracy:.2%}")
+    # prediction = model.predict(X_test)
+    # testing_df = pd.DataFrame(X_test[['X', 'Y', 'Z']])
+    # testing_df['true_class'] = y_test
+    # testing_df['predicted_class'] = prediction
+    # accuracy = (testing_df['true_class'] == testing_df['predicted_class']).mean()
+    # print(f"Accuracy on layer {args.layer}: {accuracy:.2%}")
 
     plt.figure(figsize=(15, 12))
     plot_tree(model, filled=True, feature_names=features.columns, class_names=["1", "2", "3"])
