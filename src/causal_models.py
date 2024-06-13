@@ -174,6 +174,11 @@ class SimpleSummingCausalModels(CausalModelFamily):
             "O":["P"]
         }
 
+        values["P"] = list(range(3,31))
+        functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
+                    "P": lambda x, y, z: x+y+z,
+                    "O": lambda x: x}
+
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="(X+Y+Z)")
 
 class RedundantSummingCausalModels(CausalModelFamily):

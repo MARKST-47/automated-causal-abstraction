@@ -144,7 +144,7 @@ def main():
     
     for train_id, model_info in arithmetic_family.causal_models.items():
 
-        if train_id == 1 or train_id == 2 or train_id == 3:
+        if train_id == 2 or train_id == 3:
             continue
 
         print('generating data for DAS...')
