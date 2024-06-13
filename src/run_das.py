@@ -10,7 +10,7 @@ from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results, visualize_per_trained_model
+from utils import arithmetic_input_sampler, save_results
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
