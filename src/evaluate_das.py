@@ -9,8 +9,9 @@ import random
 from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
+from itertools import product
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results
+from utils import arithmetic_input_sampler, save_results, construct_arithmetic_input
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
@@ -68,8 +69,7 @@ def intervention_id(intervention):
     if "P" in intervention:
         return 0
     
-def tokenizePrompt(input):
-    tokenizer = load_tokenizer("gpt2")
+def tokenizePrompt(input, tokenizer):
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
@@ -106,11 +106,8 @@ def main():
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
-    parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training')
-    parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
@@ -142,107 +139,32 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
     
-    for train_id, model_info in arithmetic_family.causal_models.items():
+    numbers = range(1, 11)
+    repeat = 3
+    graph_size = len(numbers) ** repeat
+    arrangements = list(product(numbers, repeat=repeat))
+    tokenized_cache = {}
+    for arrangement in arrangements:
+        tokenized_cache[arrangement] = tokenizePrompt(construct_arithmetic_input(arrangement), tokenizer)
 
-        print('generating data for DAS...')
 
-        training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset(
-            args.n_training,
-            intervention_id,
-            args.batch_size,
-            device="cuda:0",
-            sampler=arithmetic_input_sampler,
-            inputFunction=tokenizePrompt
-        )
+    for low_rank_dimension in [4, 8, 16, 32, 64, 128, 256]:
+        for layer in range(model_config.n_layer):
 
-        for low_rank_dimension in [64, 128, 256]:
-            for layer in range(model_config.n_layer):
+            for cm_id, _ in arithmetic_family.causal_models.items():
 
-                intervenable_config = IntervenableConfig({
-                        "layer": layer,
-                        "component": "block_output",
-                        "low_rank_dimension": low_rank_dimension,
-                        "unit":"pos",
-                        "max_number_of_units": 6
-                    },
-                    intervention_types=LowRankRotatedSpaceIntervention,
-                    model_type=type(model)
-                )
+                if cm_id == 2 or cm_id == 3:
+                    continue
 
-                intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
+                intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
+                intervenable = IntervenableModel.load(intervenable_model_path, model=model)
                 intervenable.set_device("cuda")
                 intervenable.disable_model_gradients()
-
-                optimizer_params = []
-                for k, v in intervenable.interventions.items():
-                    optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
-
-                optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
-
-                print('DAS training...')
-
-                intervenable.model.train()
-                print("intervention trainable parameters: ", intervenable.count_parameters())
-                print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
-                train_iterator = trange(0, int(args.epochs), desc="Epoch")
-
-                for epoch in train_iterator:
-                    torch.cuda.empty_cache()
-                    epoch_iterator = tqdm(
-                        DataLoader(
-                            training_counterfactual_data,
-                            batch_size=args.batch_size,
-                            sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
-                        ),
-                        desc=f"Epoch: {epoch}",
-                        position=0,
-                        leave=True,
-                    )
-                    
-                    for step, inputs in enumerate(epoch_iterator):
-                        for k, v in inputs.items():
-                            if v is not None and isinstance(v, torch.Tensor):
-                                inputs[k] = v.to("cuda")
-                        inputs["input_ids"] = inputs["input_ids"].squeeze()
-                        inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
-                        b_s = inputs["input_ids"].shape[0]
-                        _, counterfactual_outputs = intervenable(
-                            {"input_ids": inputs["input_ids"]},
-                            [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                            {"sources->base": [0,1,2,3,4,5]},
-                            subspaces=[
-                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
-                            ]
-                        )
-
-                        eval_metrics = compute_metrics(
-                            counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze() - min_class_value
-                        )
-
-                        # loss and backprop
-                        loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"] - min_class_value)
-                        loss_str = round(loss.item(), 2)
-                        epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
-
-                        if args.gradient_accumulation_steps > 1:
-                            loss = loss / args.gradient_accumulation_steps
-                        loss.backward()
-
-                        if total_step % args.gradient_accumulation_steps == 0:
-                            optimizer.step()
-                            intervenable.set_zero_grad()
-                        total_step += 1
-
-                # generate testing counterfactual data
-                print('testing...')
-
-                intervenable_path = os.path.join(args.results_path, f'intervenable_models/cm_{train_id}/intervenable_{low_rank_dimension}_{layer}')
-                intervenable.save(intervenable_path)
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
 
                     if args.causal_model_type == 'simple':
-                        if test_id != train_id:
+                        if test_id != cm_id:
                             continue
 
                     testing_counterfactual_data = test_model_info['causal_model'].generate_counterfactual_dataset(
@@ -251,14 +173,11 @@ def main():
                         args.batch_size,
                         device="cuda:0",
                         sampler=arithmetic_input_sampler,
-                        inputFunction=tokenizePrompt
+                        inputFunction=lambda x: tokenized_cache[tuple(x.values())]
                     )
 
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
-                    save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
+                    save_results(args.results_path, report, layer, low_rank_dimension, cm_id, test_id)
         
-        # for experiment_id in [64, 128, 256, 768, 4608]:
-        #     visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)
-
 if __name__ =="__main__":
     main()

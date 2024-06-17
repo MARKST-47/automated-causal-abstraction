@@ -62,9 +62,9 @@ def main():
                 sanity_check_visualization(args.results_path, save_dir_path, model_config.n_layer, cm_id, experiment_id, arithmetic_family)
     elif args.experiment == 'empirical':
         for cm_id, model_info in arithmetic_family.causal_models.items():
-            if cm_id == 1:
+            if cm_id == 2 or cm_id == 3:
                 continue
-            for experiment_id in [64, 128, 256]:
+            for experiment_id in [4, 8, 16, 32, 64, 128, 256]:
                 empirical_visualization(args.results_path, save_dir_path, model_config.n_layer, cm_id, experiment_id, model_info['label'])
     elif args.experiment == 'attention_weights':
 
