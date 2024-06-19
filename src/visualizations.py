@@ -58,13 +58,13 @@ def main():
             model_info['causal_model'].print_structure(fig_name=model_info['label'])
     elif args.experiment == 'sanity_check':
         for cm_id, model_info in arithmetic_family.causal_models.items():
-            for experiment_id in [64, 128, 256, 768, 4608]:
+            for experiment_id in [64, 128, 256]:
                 sanity_check_visualization(args.results_path, save_dir_path, model_config.n_layer, cm_id, experiment_id, arithmetic_family)
     elif args.experiment == 'empirical':
         for cm_id, model_info in arithmetic_family.causal_models.items():
-            if cm_id == 2 or cm_id == 3:
+            if cm_id == 1 or cm_id == 4:
                 continue
-            for experiment_id in [4, 8, 16, 32, 64, 128, 256]:
+            for experiment_id in [64, 128, 256]:
                 empirical_visualization(args.results_path, save_dir_path, model_config.n_layer, cm_id, experiment_id, model_info['label'])
     elif args.experiment == 'attention_weights':
 

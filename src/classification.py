@@ -74,17 +74,6 @@ def main():
     df = pd.DataFrame(D)
 
     features = df[['X', 'Y', 'Z']]
-
-    # interval features
-    # features['X_f1'] = features['X'] < 3
-    # features['X_f2'] = (features['X'] >= 3) & (features['X'] <= 6)
-    # features['X_f3'] = features['X'] >= 7
-    # features['Y_f1'] = features['Y'] < 3
-    # features['Y_f2'] = (features['Y'] >= 3) & (features['Y'] <= 6)
-    # features['Y_f3'] = features['Y'] >= 7
-    # features['Z_f1'] = features['Z'] < 3
-    # features['Z_f2'] = (features['Z'] >= 3) & (features['Z'] <= 6)
-    # features['Z_f3'] = features['Z'] >= 7
     
     # parity features
     features['X_even'] = features['X'] % 2 == 0
@@ -114,21 +103,12 @@ def main():
     # hyperparameter search
     param_grid = {
         'criterion': ['gini', 'entropy'], 
-        'max_depth': [4],
-        'min_samples_split': [6, 7],
-        'min_samples_leaf': [4, 5],
-        'max_features': [None, 'sqrt', 'log2', 2, 3],
-        'ccp_alpha': [0.0]
+        'max_depth': [1,2,3,4],
+        'min_samples_split': [6, 7, 8, 9, 10],
+        'min_samples_leaf': [3, 4, 5],
+        'max_features': [None, 'sqrt', 'log2'],
+        'ccp_alpha': [0.0, 0.001, 0.005, 0.1]
     }
-
-    # param_grid = {
-    #     'criterion': ['gini', 'entropy'],
-    #     'max_depth': [1, 2, 3, 4],
-    #     'min_samples_split': [7, 8, 9, 10],
-    #     'min_samples_leaf': [4, 5],
-    #     'max_features': ['sqrt', 'log2'],
-    #     'ccp_alpha': [0.001, 0.005]
-    # }
 
     grid_search = GridSearchCV(DecisionTreeClassifier(), param_grid, cv=5, scoring='accuracy')
     
@@ -138,20 +118,27 @@ def main():
 
     print(f"Best parameters for layer {args.layer}:", grid_search.best_params_)
 
-    results_df = pd.DataFrame(grid_search.cv_results_)
-    # For example, show the top 5 performing parameter combinations
-    print(results_df[['params', 'mean_test_score', 'std_test_score']].head().to_markdown(index=False,numalign='left', stralign='left'))
-
-    # testing
-    # prediction = model.predict(X_test)
-    # testing_df = pd.DataFrame(X_test[['X', 'Y', 'Z']])
-    # testing_df['true_class'] = y_test
-    # testing_df['predicted_class'] = prediction
-    # accuracy = (testing_df['true_class'] == testing_df['predicted_class']).mean()
-    # print(f"Accuracy on layer {args.layer}: {accuracy:.2%}")
+    # check accuracy on training data
+    prediction = model.predict(X_train)
+    testing_df = pd.DataFrame(X_train[['X', 'Y', 'Z']])
+    testing_df['true_class'] = y_train
+    testing_df['predicted_class'] = prediction
+    accuracy = (testing_df['true_class'] == testing_df['predicted_class']).mean()
+    print(f"Accuracy on layer {args.layer}: {accuracy:.2%}")
 
     plt.figure(figsize=(15, 12))
-    plot_tree(model, filled=True, feature_names=features.columns, class_names=["1", "2", "3"])
+    plot_tree(model, filled=True, feature_names=features.columns, class_names=["Non-Clique", "Clique"])
+    plot_tree(
+        model,
+        filled=True,
+        feature_names=features.columns,
+        class_names=["Non-Clique", "Clique"],
+        rounded=True,
+        fontsize=14,
+        node_ids=False,
+        proportion=True,
+        precision=2
+    )
     plt.title(f"Decision Tree - layer {args.layer}, lrd {args.low_rank_dimension}")
     file_path = os.path.join(save_plots_path, f'{args.low_rank_dimension}')
     os.makedirs(file_path, exist_ok=True)

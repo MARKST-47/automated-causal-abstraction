@@ -39,74 +39,70 @@ def save_results(results_path, report, layer, exp_id, train_id, test_id):
         json.dump(report, json_file)
 
 def sanity_check_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family):
-            
+    data = {}
     for test_id, model_info in arithmetic_family.causal_models.items():
-        
         label = model_info['label']
-
-        cm = []
-        report_dicts = []
-
+        accuracies = []
         for layer in range(n_layers):
             file_name = f'{train_id}_report_layer_{layer}_tkn_{experiment_id}.json'
             directory = os.path.join(results_path, f'results_{test_id}')
             file_path = os.path.join(directory, file_name)
             with open(file_path, 'r') as json_file:
-                report_dict = json.load(json_file)
-                report_dicts.append(report_dict)
+                accuracies.append(json.load(json_file)['accuracy'])
+        data[label] = accuracies
 
-        for layer, report_dict in enumerate(report_dicts, start=1):
-            cm.append(report_dict['accuracy'])
-        
-        plt.scatter(range(n_layers), cm)
-        plt.plot(range(n_layers), cm, label=label)
-        plt.xticks(range(int(min(plt.xticks()[0])), int(max(plt.xticks()[0])) + 1))
-        plt.xlabel('layer')
-        plt.ylabel('IIA')
+    fig, ax = plt.subplots(figsize=(6, 4))
+    colors = plt.cm.tab10(range(len(data))) 
 
-    plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {arithmetic_family.get_label_by_id(train_id)}')
-    plt.rcParams.update({'figure.autolayout': True})
-    plt.legend()
-    plt.tight_layout()
-    
+    for i, (label, accuracies) in enumerate(data.items()):
+        ax.plot(range(n_layers), accuracies, marker='o', linestyle='-', 
+                linewidth=1.5, color=colors[i], label=label, alpha=0.8)  
+
+    ax.set_xlabel("Layer", fontsize=10)
+    ax.set_ylabel("IIA", fontsize=10)
+    ax.set_xticks(range(n_layers))
+    ax.set_xlim([-0.5, n_layers - 0.5])
+    ax.grid(axis='y', linestyle='--')
+    ax.tick_params(axis='both', which='major', labelsize=8)
+    ax.legend(fontsize=10)
+
     save_file_name = f'{train_id}_IIA_per_layer_targeting_[0,1,2,3,4,5]_{experiment_id}.png'
     file_path = os.path.join(save_dir_path, save_file_name)
-    plt.savefig(file_path)
+    plt.savefig(file_path, dpi=300)
     plt.close()
+
+
 
 def empirical_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, label):
 
-    # label = arithmetic_family.get_label_by_id(train_id)
-
-    cm = []
-    report_dicts = []
-
+    # Data Collection and Preparation
+    accuracies = []  # Changed variable name for clarity
     for layer in range(n_layers):
         file_name = f'{train_id}_report_layer_{layer}_tkn_{experiment_id}.json'
         directory = os.path.join(results_path, f'results_{train_id}')
         file_path = os.path.join(directory, file_name)
         with open(file_path, 'r') as json_file:
-            report_dict = json.load(json_file)
-            report_dicts.append(report_dict)
+            accuracies.append(json.load(json_file)['accuracy'])
 
-    for layer, report_dict in enumerate(report_dicts, start=1):
-        cm.append(report_dict['accuracy'])
-    
-    plt.scatter(range(n_layers), cm)
-    plt.plot(range(n_layers), cm, label=label)
-    plt.xticks(range(int(min(plt.xticks()[0])), int(max(plt.xticks()[0])) + 1))
-    plt.xlabel('layer')
-    plt.ylabel('IIA')
+    # Plotting (Improved for research papers)
+    fig, ax = plt.subplots(figsize=(6, 4))  # Adjusted figure size for better fit in papers
+    ax.plot(range(n_layers), accuracies, marker='o', linestyle='-', linewidth=1.5, color='blue', alpha=0.8)
 
-    plt.title(f'IIA when targeting tokens [0,1,2,3,4,5], {experiment_id}, trained on {label}')
-    plt.rcParams.update({'figure.autolayout': True})
-    plt.legend()
-    plt.tight_layout()
-    
+    # Enhanced Plot Configuration
+    ax.set_title(f"IIA when Targeting Tokens [0, 1, 2, 3, 4, 5], Exp. {experiment_id}\nTrained on {label}", fontsize=12)  # Reduced font size for space
+    ax.set_xlabel("Layer", fontsize=10)
+    ax.set_ylabel("IIA (Accuracy)", fontsize=10)
+    ax.set_xticks(range(n_layers))
+    ax.set_xlim([-0.5, n_layers - 0.5])
+    ax.grid(axis='y', linestyle='--')
+    ax.tick_params(axis='both', which='major', labelsize=8)
+
+    # Saving (High resolution for publication)
     save_file_name = f'{train_id}_IIA_per_layer_targeting_[0,1,2,3,4,5]_{experiment_id}.png'
     file_path = os.path.join(save_dir_path, save_file_name)
-    plt.savefig(file_path)
-    plt.close()
+    plt.savefig(file_path, dpi=300)  # Higher DPI for clearer images
+    plt.close()  # Ensure plot is closed to avoid display issues
+
 
 def visualize_graph(graph_encoding, label=''):
     G = nx.from_numpy_matrix(graph_encoding.numpy(), create_using=nx.DiGraph)

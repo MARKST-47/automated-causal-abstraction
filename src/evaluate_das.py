@@ -148,12 +148,12 @@ def main():
         tokenized_cache[arrangement] = tokenizePrompt(construct_arithmetic_input(arrangement), tokenizer)
 
 
-    for low_rank_dimension in [4, 8, 16, 32, 64, 128, 256]:
+    for low_rank_dimension in [64, 128, 256]:
         for layer in range(model_config.n_layer):
 
             for cm_id, _ in arithmetic_family.causal_models.items():
 
-                if cm_id == 2 or cm_id == 3:
+                if cm_id == 1 or cm_id == 4:
                     continue
 
                 intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
