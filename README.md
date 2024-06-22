@@ -78,6 +78,22 @@ To train each intervenable model using the _simple_ causal models, run:
 python3 src/run_das.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
 ```
 
+### Evaluating DAS
+
+Evaluating on the simple causal models:
+
+```
+python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type simple
+```
+
+Evaluating on the arithmetic causal models:
+
+### Evaluating DAS
+
+```
+python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type arithmetic
+```
+
 ### Sanity check experiment
 
 After training the intervenable models for each layer and lower rank dimension listed in the previous section, run a sanity check experiment similar to the one in the MLP section. It is sufficient to run the sanity check on the arithmetic causal models.
