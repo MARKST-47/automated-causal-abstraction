@@ -7,25 +7,20 @@ import torch
 from torch.utils.data import DataLoader
 import random
 from tqdm import tqdm, trange
-from pyvene import count_parameters, set_seed
+from pyvene import set_seed
 import argparse
 from itertools import product
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results, construct_arithmetic_input
+from utils import arithmetic_input_sampler, save_results, construct_arithmetic_input, ruled_arithmetic_input_sampler
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
 from pyvene import (
-    IntervenableModel,
-    IntervenableConfig,
-    LowRankRotatedSpaceIntervention
+    IntervenableModel
 )
 
-# from my_pyvene.models.intervenable_base import IntervenableModel
-# from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
-# from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
@@ -107,6 +102,7 @@ def main():
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
+    parser.add_argument('--experiment', type=str, choices=['', 'original', 'ruled'], default='')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
@@ -147,13 +143,20 @@ def main():
     for arrangement in arrangements:
         tokenized_cache[arrangement] = tokenizePrompt(construct_arithmetic_input(arrangement), tokenizer)
 
+    if args.experiment == 'original' or args.experiment == '':
+        sampler = arithmetic_input_sampler
+    elif args.experiment == 'ruled':
+        sampler = ruled_arithmetic_input_sampler
+    else:
+        raise ValueError(f"Invalid causal model type: {args.experiment}. Can only choose between arithmetic or simple.")
 
-    for low_rank_dimension in [64, 128, 256]:
+    for low_rank_dimension in [4,8,16,32]:
         for layer in range(model_config.n_layer):
+        # for layer in [0,1,2,3,4,5,6,7,8,9]:
+        # for layer in [10,11]:
 
             for cm_id, _ in arithmetic_family.causal_models.items():
-
-                if cm_id == 1 or cm_id == 4:
+                if cm_id == 2 or cm_id == 3:
                     continue
 
                 intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
@@ -163,7 +166,7 @@ def main():
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
 
-                    if args.causal_model_type == 'simple':
+                    if args.causal_model_type == 'simple' or args.experiment == 'original' or args.experiment == 'ruled':
                         if test_id != cm_id:
                             continue
 
@@ -172,7 +175,7 @@ def main():
                         intervention_id,
                         args.batch_size,
                         device="cuda:0",
-                        sampler=arithmetic_input_sampler,
+                        sampler=sampler,
                         inputFunction=lambda x: tokenized_cache[tuple(x.values())]
                     )
 

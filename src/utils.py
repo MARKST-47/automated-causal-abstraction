@@ -20,6 +20,15 @@ def arithmetic_input_sampler():
     C = randNum()
     return {"X":A, "Y":B, "Z":C}
 
+def ruled_arithmetic_input_sampler():
+
+    while True:
+        A = randNum()
+        B = randNum()
+        C = randNum()
+        if A < 5 and B < 5 and C < 5:
+            return {"X":A, "Y":B, "Z":C}
+
 def redundancy_input_sampler():
     A = randNum()
     B = randNum()
@@ -71,7 +80,43 @@ def sanity_check_visualization(results_path, save_dir_path, n_layers, train_id, 
     plt.savefig(file_path, dpi=300)
     plt.close()
 
+def evaluation_visualization(results_path, save_dir_path, n_layers, cm_id, experiment_id):
+    data = {}
 
+    for name in ['X,Y,Z<5', 'X,Y,Z>6', 'original']:
+        dir_path = os.path.join(results_path, name)
+
+        if name == 'sanity_check':
+            name = 'original'
+
+        accuracies = []
+        for layer in range(n_layers):
+            file_name = f'{cm_id}_report_layer_{layer}_tkn_{experiment_id}.json'
+            directory = os.path.join(dir_path, f'results_{cm_id}')
+            file_path = os.path.join(directory, file_name)
+            with open(file_path, 'r') as json_file:
+                accuracies.append(json.load(json_file)['accuracy'])
+        data[name] = accuracies
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    colors = plt.cm.tab10(range(len(data))) 
+
+    for i, (label, accuracies) in enumerate(data.items()):
+        ax.plot(range(n_layers), accuracies, marker='o', linestyle='-', 
+                linewidth=1.5, color=colors[i], label=label, alpha=0.8)  
+
+    ax.set_xlabel("Layer", fontsize=10)
+    ax.set_ylabel("IIA", fontsize=10)
+    ax.set_xticks(range(n_layers))
+    ax.set_xlim([-0.5, n_layers - 0.5])
+    ax.grid(axis='y', linestyle='--')
+    ax.tick_params(axis='both', which='major', labelsize=8)
+    ax.legend(fontsize=10)
+
+    save_file_name = f'{cm_id}_IIA_comparing_original_and_ruled_{experiment_id}.png'
+    file_path = os.path.join(save_dir_path, save_file_name)
+    plt.savefig(file_path, dpi=300)
+    plt.close()
 
 def empirical_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, label):
 

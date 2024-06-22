@@ -56,6 +56,7 @@ class RemovalHeuristic(CliqueAnalysers):
         while True:
             max_clique = nx.approximation.max_clique(G_copy)
             p = len(max_clique)
+            
             if threshold > p:
                 break
             self.cliques.append(list(max_clique))
