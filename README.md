@@ -140,7 +140,7 @@ You can switch the clique finder with one defined in the `clique_finders.py`. Th
 
 The clique finder used in our project is `RemovalHeuristic`.
 
-## Classification of new data points
+## Obtaining Interpretable Rules
 
 Based on the cliques found previously, we define a `DecisionTree` as a binary classifier to obtain rules about the specific data that is part of the cliques. Run the following command to train a classifier per clique data obtained per layer.
 
