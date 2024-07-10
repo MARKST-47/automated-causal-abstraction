@@ -101,7 +101,7 @@ After training the intervenable models for each layer and lower rank dimension l
 Example of command to run the sanity check:
 
 ```
-python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type arithmetic --results_path disentangling_results/ --experiment sanity_check
+python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type arithmetic --results_path results/ --experiment sanity_check
 ```
 
 
@@ -110,7 +110,7 @@ python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/m
 We want to check where each variable lives when we use intervenable variables which are only copies of the input variables. After training the intervenable models when aligning the simple causal models with the LLM, one can check the IIA per layer and low rank dimension. To reproduce our plots, run this command:
 
 ```
-python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --results_path disentangling_results/ --experiment empirical
+python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --results_path results/ --experiment empirical
 ```
 
 ## Disentangling causal models
@@ -118,7 +118,7 @@ python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/m
 Run the following command to obtain 36 graphs weighted by the IIA between any two data points:
 
 ```
-python3 disentangle_causal_models.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --results_path disentangling_results/ --causal_model_type arithmetic
+python3 disentangle_causal_models.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --results_path results/ --causal_model_type arithmetic
 ```
 
 ## Clique analysis
@@ -126,9 +126,26 @@ python3 disentangle_causal_models.py --model_path /home/mpislar/LLM_causal_model
 Run the following command to analyise the cliques in the graphs obtained previously:
 
 ```
-python3 disentangle_causal_models.py --results_path disentangling_results/ --causal_model_type arithmetic
+python3 analyse_graphs.py 
+--results_path results/
 ```
+
+You can switch the clique finder with one defined in the `clique_finders.py`. The available options are:
+- `ExhaustiveCliqueFinder` - [Algorithm 457: finding all cliques of an undirected graph](https://dl.acm.org/doi/10.1145/362342.362367) returning all maximal cliques, and this finder filters by maximum clique length to obtain all maximum cliques
+- `DegreeHeuristic` - classical removal heuristic based on node degree
+- `RemovalHeuristic` - [Approximating maximum independent sets by excluding subgraphs](https://link.springer.com/article/10.1007/BF01994876) + removal heuristic
+- `BranchAndBoundHeuristic` - [Solution of Maximum Clique Problemby Using Branch and Bound Method](https://www.m-hikari.com/ams/ams-2014/ams-1-4-2014/mamatAMS1-4-2014-3.pdf)
+- `MaxCliqueHeuristic` - [Approximating maximum independent sets by excluding subgraphs](https://link.springer.com/article/10.1007/BF01994876)
+- `MaxCliqueHeuristic_v2` - [Listing All Maximal Cliques in Large Sparse Real-World Graphs](https://link.springer.com/chapter/10.1007/978-3-642-20662-7_31)
+
+The clique finder used in our project is `RemovalHeuristic`.
 
 ## Classification of new data points
 
-Loading..
+Based on the cliques found previously, we define a `DecisionTree` as a binary classifier to obtain rules about the specific data that is part of the cliques. Run the following command to train a classifier per clique data obtained per layer.
+
+```
+python3 classification.py --results_path results/
+```
+
+In this way we obtain interpretable rules about how the LLM reasons when processing different clusters of input. For example, for inputs that are permutations of {7,8,9,10}, none of the causal models defined exhibits a high abstraction level. Therefore, the LLM possibly uses a different causal mechanism to solve the sum of three numbers for higher inputs.
