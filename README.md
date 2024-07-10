@@ -45,7 +45,7 @@ We finetune [GPT2ForSequenceClassification](https://huggingface.co/docs/transfor
 python3 train_gpt2.py
 ```
 
-### Training DAS
+### Training Intervenable Models
 
 We define three possible graphs which can abstract the finetuned GPT2. They are represented in the below graphs, where `P` is the variable summing each pair of two variables. We refer to these graphs as the _arithmetic_ ones.
 
@@ -78,34 +78,34 @@ To train each intervenable model using the _simple_ causal models, run:
 python3 src/run_das.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
 ```
 
-### Evaluating DAS
+### Evaluating Trained Intervenable Models
 
-Evaluating on the simple causal models:
+Interchange Intervention Accuracy (IIA) is used as evaluation metric for this project.
+
+#### Evaluating on the simple causal models:
 
 ```
 python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type simple
 ```
 
-Evaluating on the arithmetic causal models:
-
-### Evaluating DAS
+#### Evaluating on the arithmetic causal models:
 
 ```
 python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type arithmetic
 ```
 
-### Sanity check experiment
+### Interpretability Analysis
+
+#### Evaluating with different causal models than the trained one
 
 After training the intervenable models for each layer and lower rank dimension listed in the previous section, run a sanity check experiment similar to the one in the MLP section. It is sufficient to run the sanity check on the arithmetic causal models.
-
-Example of command to run the sanity check:
 
 ```
 python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type arithmetic --results_path results/ --experiment sanity_check
 ```
 
 
-### Empirical experiment (where does each variable live?)
+#### Where does the input/output live?
 
 We want to check where each variable lives when we use intervenable variables which are only copies of the input variables. After training the intervenable models when aligning the simple causal models with the LLM, one can check the IIA per layer and low rank dimension. To reproduce our plots, run this command:
 
@@ -113,7 +113,7 @@ We want to check where each variable lives when we use intervenable variables wh
 python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --results_path results/ --experiment empirical
 ```
 
-## Disentangling causal models
+## Learning Rules on the Mixture of Causal Models
 
 Run the following command to obtain 36 graphs weighted by the IIA between any two data points:
 
