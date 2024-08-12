@@ -57,7 +57,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
-    parser.add_argument('--results_path', type=str, default='disentangling_results/', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--low_rank_dim', type=int, default=256, help='low rank dimension for rotation intervention')
     parser.add_argument('--layer', type=int, default=0, help='layer on which to evaluate')
@@ -97,6 +97,7 @@ def main():
 
     low_rank_dimension = args.low_rank_dim
     numbers = range(1, 11)
+    # numbers = range(1,4)
     repeat = 3
     graph_size = len(numbers) ** repeat
     arrangements = list(product(numbers, repeat=repeat))
@@ -110,6 +111,10 @@ def main():
     print('Constructing the graphs..')
     # loop through the family of causal models
     for cm_id, model_info in arithmetic_family.causal_models.items():
+
+        # to only get the graphs for targetting X or X+Y+Z
+        if model_info['label'] == 'X+(Y)+Z' or model_info['label'] == 'X+Y+(Z)':
+            continue
 
         print('loading intervenable model')
         intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{args.layer}')
