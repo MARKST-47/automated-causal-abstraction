@@ -150,14 +150,14 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.experiment}. Can only choose between arithmetic or simple.")
 
-    for low_rank_dimension in [4,8,16,32]:
+    for low_rank_dimension in [256]:
         for layer in range(model_config.n_layer):
-        # for layer in [0,1,2,3,4,5,6,7,8,9]:
+        # for layer in [5,6,7,8,9]:
         # for layer in [10,11]:
 
             for cm_id, _ in arithmetic_family.causal_models.items():
-                if cm_id == 2 or cm_id == 3:
-                    continue
+                # if cm_id == 2 or cm_id == 3:
+                #     continue
 
                 intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
                 intervenable = IntervenableModel.load(intervenable_model_path, model=model)

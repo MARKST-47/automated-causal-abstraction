@@ -2,6 +2,7 @@ from typing import Dict, Any
 from abc import ABC, abstractmethod
 from utils import randNum
 from my_pyvene.data_generators.causal_model import CausalModel
+from itertools import product
 # from pyvene import CausalModel
 
 class CausalModelFamily(ABC): # abstract base class
@@ -180,6 +181,66 @@ class SimpleSummingCausalModels(CausalModelFamily):
                     "O": lambda x: x}
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="(X+Y+Z)")
+
+# (X+Y)*Z OR X*Z+Y*Z
+class SumAndMultiply(CausalModelFamily):
+    def __init__(self):
+        super().__init__()
+    
+    def construct_default(self):
+
+        # (X + Y) * Z
+        variables = ["X", "Y", "Z", "P", "O"]
+
+        number_of_entities = 20
+
+        reps = [randNum() for _ in range(number_of_entities)]
+        values = {variable:reps for variable in ["X", "Y", "Z"]}
+        values["P"] = list(range(2, 21)) # X+Y
+        values["O"] = list({num1 * num2 for num1 in range(2, 21) for num2 in range(1, 11)})
+
+        def FILLER():
+            return reps[0]
+        
+        functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
+                    "P": lambda x, y: x + y,
+                    "O": lambda x, y: x * y}
+        
+        parents = {
+            "X":[], "Y":[], "Z":[],
+            "P":["X", "Y"],
+            "O":["P", "Z"]
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions), label="(X+Y)*Z")
+
+        # X * Z + Y * Z
+        # variables = ["X", "Y", "Z", "P", "Q", "O"]
+
+        # number_of_entities = 20
+
+        # reps = [randNum() for _ in range(number_of_entities)]
+        # values = {variable:reps for variable in ["X", "Y", "Z"]}
+        # values["P"] = list(range(1, 101))
+        # values["Q"] = list(range(1, 101))
+        # values["O"] = list({num1 * num2 for num1 in range(2, 21) for num2 in range(1, 11)})
+
+        # def FILLER():
+        #     return reps[0]
+        
+        # functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
+        #             "P": lambda x, y: x * y,
+        #             "Q": lambda x, y: x * y,
+        #             "O": lambda x, y: x + y}
+        
+        # parents = {
+        #     "X":[], "Y":[], "Z":[],
+        #     "P":["X", "Z"],
+        #     "Q":["Y", "Z"],
+        #     "O":["P", "Q"]
+        # }
+
+        # self.add_model(CausalModel(variables, values, parents, functions), label="X*Z+Y*Z")
 
 class RedundantSummingCausalModels(CausalModelFamily):
     def __init__(self):

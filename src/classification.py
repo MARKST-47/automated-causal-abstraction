@@ -130,24 +130,26 @@ def main():
         accuracy = (testing_df['true_class'] == testing_df['predicted_class']).mean()
         print(f"Accuracy on layer {args.layer}: {accuracy:.2%}")
 
-        plt.figure(figsize=(50, 20))
-        plot_tree(model, filled=True, feature_names=features.columns, class_names=["Non-Clique", "Clique"])
-        plot_tree(
-            model,
+        plt.figure(figsize=(12, 8))
+        # plot_tree(model, filled=True, feature_names=features.columns, class_names=["Non-Clique", "Clique"])
+        plot_tree(model, 
             filled=True,
             feature_names=features.columns,
             class_names=["Non-Clique", "Clique"],
             rounded=True,
-            fontsize=14,
+            fontsize=12,
+            max_depth=5,
+            impurity=False,
             node_ids=False,
             proportion=True,
             precision=2
-        )
-        plt.title(f"Decision Tree - layer {args.layer}, lrd {args.low_rank_dimension}")
+        )  
+        # plt.title(f"Decision Tree - layer {args.layer}, lrd {args.low_rank_dimension}")
+        plt.tight_layout()
         file_path = os.path.join(save_plots_path, f'{args.low_rank_dimension}')
         os.makedirs(file_path, exist_ok=True)
-        file_path = os.path.join(file_path, f"decision_tree_{args.layer}.png")
-        plt.savefig(file_path)
+        file_path = os.path.join(file_path, f"decision_tree_{args.layer}.pdf")
+        plt.savefig(file_path, bbox_inches='tight')
         plt.close()
 
         file_path = os.path.join(save_models_path, f'{args.low_rank_dimension}')
