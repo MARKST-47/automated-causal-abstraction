@@ -44,6 +44,7 @@ We finetune [GPT2ForSequenceClassification](https://huggingface.co/docs/transfor
 ```
 python3 train_gpt2.py
 ```
+After finetuning the model on the arithmetic task, I made it publicly available on HuggingFace. For further use of this model, one can pass to the `model_path` argument this:[`mara589/arithmetic-gpt2`](https://huggingface.co/mara589/arithmetic-gpt2), resulting in the model used being the one I finetuned.
 
 ### Training Intervenable Models
 
@@ -69,13 +70,13 @@ There is an intervenable model trained for each of the 12 layers of the LLM, tar
 To train the each intervenable model using the _arithmetic_ causal models, run:
 
 ```
-python3 src/run_das.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type arithmetic --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
+python3 src/run_das.py --model_path mara589/arithmetic-gpt2 --causal_model_type arithmetic --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
 ```
 
 To train each intervenable model using the _simple_ causal models, run:
 
 ```
-python3 src/run_das.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
+python3 src/run_das.py --model_path mara589/arithmetic-gpt2 --causal_model_type simple --n_training 256000 --n_testing 256 --batch_size 1280 --epochs 4
 ```
 
 ### Evaluating Trained Intervenable Models
@@ -85,13 +86,13 @@ Interchange Intervention Accuracy (IIA) is used as evaluation metric for this pr
 #### Evaluating on the simple causal models:
 
 ```
-python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type simple
+python3 evaluate_das.py --model_path mara589/arithmetic-gpt2 --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type simple
 ```
 
 #### Evaluating on the arithmetic causal models:
 
 ```
-python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learning/src/models/trained_gpt2forseq --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type arithmetic
+python3 evaluate_das.py --model_path mara589/arithmetic-gpt2 --results_path results/ --n_testing 25600 --batch_size 256 --causal_model_type arithmetic
 ```
 
 ### Interpretability Analysis
@@ -101,7 +102,7 @@ python3 evaluate_das.py --model_path /home/mara/workspace/LLM_causal_model_learn
 After training the intervenable models for each layer and lower rank dimension listed in the previous section, run a sanity check experiment similar to the one in the MLP section. It is sufficient to run the sanity check on the arithmetic causal models.
 
 ```
-python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type arithmetic --results_path results/ --experiment sanity_check
+python3 visualizations.py --model_path mara589/arithmetic-gpt2 --causal_model_type arithmetic --results_path results/ --experiment sanity_check
 ```
 
 
@@ -110,7 +111,7 @@ python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/m
 We want to check where each variable lives when we use intervenable variables which are only copies of the input variables. After training the intervenable models when aligning the simple causal models with the LLM, one can check the IIA per layer and low rank dimension. To reproduce our plots, run this command:
 
 ```
-python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --causal_model_type simple --results_path results/ --experiment empirical
+python3 visualizations.py --model_path mara589/arithmetic-gpt2 --causal_model_type simple --results_path results/ --experiment empirical
 ```
 
 ## Learning Rules on the Mixture of Causal Models
@@ -118,7 +119,7 @@ python3 visualizations.py --model_path /home/mpislar/LLM_causal_model_learning/m
 Run the following command to obtain 36 graphs weighted by the IIA between any two data points:
 
 ```
-python3 disentangle_causal_models.py --model_path /home/mpislar/LLM_causal_model_learning/models/trained_gpt2forseq --results_path results/ --causal_model_type arithmetic
+python3 disentangle_causal_models.py --model_path mara589/arithmetic-gpt2 --results_path results/ --causal_model_type arithmetic
 ```
 
 ## Clique analysis
