@@ -30,7 +30,7 @@ def main():
     if not os.path.exists(args.results_path):
         raise argparse.ArgumentTypeError("Invalid results_path. Path does not exist.")
     
-    classification_path = os.path.join(args.results_path, 'classification_data')
+    classification_path = os.path.join(args.results_path, 'classification_data_2')
     os.makedirs(classification_path, exist_ok=True)
 
     cliques_info_path = os.path.join(args.results_path, 'cliques_info')
@@ -44,30 +44,57 @@ def main():
         print(f'Loading graph for lrd {args.low_rank_dimension}, layer {args.layer}, model {label}')
         graph_path = os.path.join(args.results_path, f'graphs/{label}_graph_{args.low_rank_dimension}_{args.layer}.pt')
         graph = torch.load(graph_path)
-        # mask = (graph == 1).float()
-        # graph = graph * mask
+        mask = (graph == 1).float()
+        graph = graph * mask
         graph.fill_diagonal_(0)
 
         print('Constructing graph..')
         G = nx.from_numpy_array(graph.numpy())
 
-        # obtaining the list of nodes sorted by degree
+        # VERSION 1
         node_degrees = dict(G.degree())
         sorted_nodes = sorted(node_degrees, key=node_degrees.get, reverse=True)
-        top_k_nodes = [node for node in sorted_nodes if node not in exclude_list][:args.top_k]
+        # top_k_nodes = [node for node in sorted_nodes if node not in exclude_list][:args.top_k]
+        # exclude_list.update(top_k_nodes)
+
+        # subgraph = G.subgraph(top_k_nodes)
+        # num_nodes = subgraph.number_of_nodes()
+        # iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True)) / (num_nodes*(num_nodes - 1)/2)
+
+        # VERSION 2
+
+        top_k_nodes = []
+        iia = 0
+        temp_iia = 0
+
+        for node in sorted_nodes:
+            if node in exclude_list:
+                continue
+            subgraph = G.subgraph([n for n in top_k_nodes + [node]])
+            temp_iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True))
+            num_nodes = subgraph.number_of_nodes()
+            if (num_nodes*(num_nodes - 1)/2) > 0:
+                temp_iia = temp_iia/(num_nodes*(num_nodes - 1)/2)
+            if temp_iia >= iia:
+                iia = temp_iia
+                top_k_nodes.append(node)
+            
+            if len(top_k_nodes) > args.top_k:
+                break
+        
         exclude_list.update(top_k_nodes)
 
+        num_nodes = subgraph.number_of_nodes()
         subgraph = G.subgraph(top_k_nodes)
+        print(sum(data['weight'] for _, _, data in subgraph.edges(data=True))/(num_nodes*(num_nodes - 1)/2), len(top_k_nodes))
+        # num_edges = subgraph.number_of_edges()
+        # print((num_nodes*(num_nodes - 1)/2), num_edges)
 
-        iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True))
-        num_edges = subgraph.number_of_edges()
-        print(iia/num_edges)
+        # graph_density = nx.density(subgraph)
+        # avg_degree = sum(dict(subgraph.degree()).values()) / subgraph.number_of_nodes()
 
-        graph_density = nx.density(subgraph)
-        avg_degree = sum(dict(subgraph.degree()).values()) / subgraph.number_of_nodes()
-
-        print(f'Graph density: {graph_density}')
-        print(f'Average node degree: {avg_degree}')
+        # print(f'Graph density: {graph_density}')
+        # print(f'Average node degree: {avg_degree}')
 
         save_data_path = os.path.join(classification_path, f'{args.low_rank_dimension}')
         os.makedirs(save_data_path, exist_ok=True)
