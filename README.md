@@ -1,7 +1,6 @@
-# Disentangling Causal Models with DAS
-Master Thesis - Discovering Causal Models which Align with LLMs Using Distributed Alignment Search (DAS)
+# Learning a Mixture of Causal Models with Distributed Alignment Search (DAS)
 
-The code of this thesis was based on the one provided by the authors in their [pyvene repo](https://github.com/stanfordnlp/pyvene).
+Credits to the [pyvene library](https://github.com/stanfordnlp/pyvene).
 
 ## DAS on MLP
 
