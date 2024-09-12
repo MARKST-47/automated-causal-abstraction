@@ -132,7 +132,7 @@ def main():
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
         # to only get the graph for targetting X+Y+Z
-        if model_info['label'] == 'X+(Y+Z)' or model_info['label'] == '(X+Z)+Y': #or model_info['label'] == '(X+Y+Z)':
+        if model_info['label'] == 'X+(Y)+Z' or model_info['label'] == 'X+Y+(Z)' or model_info['label'] == '(X)+Y+Z':
             continue
 
         print('loading intervenable model')
