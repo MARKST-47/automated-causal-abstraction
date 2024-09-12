@@ -136,7 +136,14 @@ def main():
             continue
 
         print('loading intervenable model')
-        intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{args.layer}')
+        # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{args.layer}')
+        if cm_id == 1:
+            intervenable_model_path = 'mara589/X-intervenable-256-7'
+        elif cm_id == 4:
+            intervenable_model_path = 'mara589/X-Y-Z-intervenable-256-7'
+        else:
+            intervenable_model_path = ''
+        
         intervenable = IntervenableModel.load(intervenable_model_path, model=model)
         intervenable.set_device("cuda")
         intervenable.disable_model_gradients()
