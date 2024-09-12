@@ -116,7 +116,7 @@ def main():
 
     low_rank_dimension = args.low_rank_dim
     numbers = range(1, 11)
-    # numbers = range(7,11)
+    # numbers = range(9,11)
     repeat = 3
     graph_size = len(numbers) ** repeat
     arrangements = list(product(numbers, repeat=repeat))
@@ -157,7 +157,7 @@ def main():
             for j, source in enumerate(arrangements):
 
                 if i <= j:
-                    continue
+                    break
 
                 source = construct_arithmetic_input(source)
                 
