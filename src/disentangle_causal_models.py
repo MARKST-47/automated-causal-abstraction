@@ -132,17 +132,24 @@ def main():
     for cm_id, model_info in arithmetic_family.causal_models.items():
 
         # to only get the graph for targetting X+Y+Z
-        if model_info['label'] == 'X+(Y)+Z' or model_info['label'] == 'X+Y+(Z)' or model_info['label'] == '(X)+Y+Z':
+        if model_info['label'] == 'X+(Y+Z)' or model_info['label'] == '(X+Z)+Y': #or model_info['label'] == '(X+Y+Z)':
             continue
 
         print('loading intervenable model')
         # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{args.layer}')
-        if cm_id == 1:
-            intervenable_model_path = 'mara589/X-intervenable-256-7'
-        elif cm_id == 4:
-            intervenable_model_path = 'mara589/X-Y-Z-intervenable-256-7'
+        
+        if args.causal_model_type =='simple':
+            if cm_id == 1:
+                intervenable_model_path = 'mara589/X-intervenable-256-7'
+            elif cm_id == 4:
+                intervenable_model_path = 'mara589/X-Y-Z-intervenable-256-7'
+            else:
+                intervenable_model_path = ''
         else:
-            intervenable_model_path = ''
+            if cm_id == 1:
+                intervenable_model_path = 'mara589/X-Y-intervenable-256-7'
+            else:
+                intervenable_model_path = ''
         
         intervenable = IntervenableModel.load(intervenable_model_path, model=model)
         intervenable.set_device("cuda")
