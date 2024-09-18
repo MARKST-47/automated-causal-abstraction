@@ -1,8 +1,7 @@
 from typing import Dict, Any
 from abc import ABC, abstractmethod
-from utils import randNum
+from utils import randNum, randBool
 from my_pyvene.data_generators.causal_model import CausalModel
-from itertools import product
 # from pyvene import CausalModel
 
 class CausalModelFamily(ABC): # abstract base class
@@ -182,96 +181,136 @@ class SimpleSummingCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="(X+Y+Z)")
 
-# (X+Y)*Z OR X*Z+Y*Z
-class SumAndMultiply(CausalModelFamily):
-    def __init__(self):
+
+class DeMorgansLawCausalModels(CausalModelFamily):
+    def __init__(self, op1, op2, op3, binop):
+        self.op1 = op1
+        self.op2 = op2
+        self.op3 = op3
+        self.binop = binop
         super().__init__()
     
     def construct_default(self):
 
-        # (X + Y) * Z
-        variables = ["X", "Y", "Z", "P", "O"]
-
-        number_of_entities = 20
-
-        reps = [randNum() for _ in range(number_of_entities)]
-        values = {variable:reps for variable in ["X", "Y", "Z"]}
-        values["P"] = list(range(2, 21)) # X+Y
-        values["O"] = list({num1 * num2 for num1 in range(2, 21) for num2 in range(1, 11)})
-
         def FILLER():
             return reps[0]
         
-        functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
-                    "P": lambda x, y: x + y,
-                    "O": lambda x, y: x * y}
+        def binop_or(x,y):
+            return x or y
         
-        parents = {
-            "X":[], "Y":[], "Z":[],
-            "P":["X", "Y"],
-            "O":["P", "Z"]
-        }
-
-        self.add_model(CausalModel(variables, values, parents, functions), label="(X+Y)*Z")
-
-        # X * Z + Y * Z
-        # variables = ["X", "Y", "Z", "P", "Q", "O"]
-
-        # number_of_entities = 20
-
-        # reps = [randNum() for _ in range(number_of_entities)]
-        # values = {variable:reps for variable in ["X", "Y", "Z"]}
-        # values["P"] = list(range(1, 101))
-        # values["Q"] = list(range(1, 101))
-        # values["O"] = list({num1 * num2 for num1 in range(2, 21) for num2 in range(1, 11)})
-
-        # def FILLER():
-        #     return reps[0]
+        def binop_and(x,y):
+            return x and y
         
-        # functions = {"X":FILLER, "Y":FILLER, "Z":FILLER,
-        #             "P": lambda x, y: x * y,
-        #             "Q": lambda x, y: x * y,
-        #             "O": lambda x, y: x + y}
+        def op_not(x):
+            return not x
         
-        # parents = {
-        #     "X":[], "Y":[], "Z":[],
-        #     "P":["X", "Z"],
-        #     "Q":["Y", "Z"],
-        #     "O":["P", "Q"]
-        # }
+        def op_empty(x):
+            return x
+        
+        if self.op1 == 'not':
+            if self.binop == 'and':
+                self.binop = binop_or
+            elif self.binop == 'or':
+                self.binop = binop_and
 
-        # self.add_model(CausalModel(variables, values, parents, functions), label="X*Z+Y*Z")
+            self.op1 = op_not
+        else:
+            self.op1 = op_empty
+        
+        if self.op2 == 'not':
+            self.op2 = op_not
+        else:
+            self.op2 = op_empty
 
-class RedundantSummingCausalModels(CausalModelFamily):
-    def __init__(self):
-        super().__init__()
-    
-    def construct_default(self):
+        if self.op3 == 'not':
+            self.op3 = op_not
+        else:
+            self.op3 = op_empty
 
-        variables =  ["X1", "X2", "X3", "Y", "Z", "P", "Q", "O"]
+        # OP1(OP2(A)) OP1(BIN) OP1(OP3(B))
+
+        variables =  ["X", "Y", "X'", "Y'", "P", "W", "O"]
         number_of_entities = 20
 
-        reps = [randNum() for _ in range(number_of_entities)]
-        values = {variable:reps for variable in ["X1", "Y", "Z"]}
-        values["X2"] = values["X1"]
-        values["X3"] = values["X2"]
-        values["P"] = list(range(1,11)) # can possibly take values from 1 to 10
-        values["Q"] = list(range(2, 21))
-        values["O"] = list(range(3, 31))
+        reps = [randBool() for _ in range(number_of_entities)]
+        values = {variable:reps for variable in ["X", "Y"]}
+        values["X'"] = [True, False]
+        values["Y'"] = [True, False]
+        values["P"] = [True, False]
+        values["W"] = [True, False]
+        values["O"] = [True, False]
 
-        def FILLER():
-            return reps[0]
-
-        functions = {"X1":FILLER, "X2":FILLER, "X3":FILLER, "Y":FILLER, "Z":FILLER,
-                    "P": lambda x, y, z: x,
-                    "Q": lambda x, y: x + y,
-                    "O": lambda x, y: x + y}
+        functions = {"X":FILLER, "Y":FILLER,
+                     "X'": lambda x: self.op2(x),
+                     "Y'": lambda x: self.op3(x),
+                     "P": lambda x: self.op1(x),
+                     "W": lambda x: self.op1(x),
+                     "O": lambda x, y: self.binop(x, y)}
         
         parents = {
-            "X1":[], "X2":[], "X3":[], "Y":[], "Z":[],
-            "P":["X1", "X2", "X3"],
-            "Q": ["Y", "Z"],
-            "O":["P", "Q"]
+            "X":[], "Y":[],
+            "X'":["X"],
+            "Y'": ["Y"],
+            "P":["X'"],
+            "W": ["Y'"],
+            "O":["P", "W"]
         }
 
-        self.add_model(CausalModel(variables, values, parents, functions), label="(X+X-X)+Y+Z")
+        pos = {
+            "X": (1, 0),
+            "Y": (2, 0),
+            "X'": (1, 1),
+            "Y'": (2, 1),
+            "P": (1, 2),
+            "W": (2, 2),
+            "O": (1.5, 3),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1(OP2(A))_OP1(BIN)_OP1(OP3(B))")
+
+        # OP1(OP2(A) BIN OP3(B))
+
+        variables =  ["X", "Y", "X'", "Y'", "P", "O"]
+        number_of_entities = 20
+
+        reps = [randBool() for _ in range(number_of_entities)]
+        values = {variable:reps for variable in ["X", "Y"]}
+        values["X'"] = [True, False]
+        values["Y'"] = [True, False]
+        values["P"] = [True, False]
+        values["O"] = [True, False]
+
+        if self.op1 == op_not:
+            if self.binop == binop_and:
+                print('yes')
+                self.binop = binop_or
+            elif self.binop == binop_or:
+                print('no')
+                self.binop = binop_and
+        else:
+            self.op1 = op_empty
+
+        functions = {"X":FILLER, "Y":FILLER,
+                     "X'": lambda x: self.op2(x),
+                     "Y'": lambda x: self.op3(x),
+                     "P": lambda x,y: self.binop(x,y),
+                     "O": lambda x: self.op1(x)}
+        
+        parents = {
+            "X":[], "Y":[],
+            "X'":["X"],
+            "Y'": ["Y"],
+            "P":["X'", "Y'"],
+            "O":["P"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Y": (2, 0),
+            "X'": (1, 1),
+            "Y'": (2, 1),
+            "P": (1.5, 2),
+            "O": (1.5, 3),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1(OP2(A)_BIN_OP3(B))")
