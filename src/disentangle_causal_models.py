@@ -23,30 +23,6 @@ def tokenizePrompt(input, tokenizer):
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
-# def eval_one_point(intervenable, data, low_rank_dimension, min_class_value=3):
-#     eval_labels = []
-#     eval_preds = []
-
-#     with torch.no_grad():
-#         for input_key in ["base_source", "source_base"]:
-#             inputs = data[input_key]
-
-#             _, counterfactual_outputs = intervenable(
-#                 {"input_ids": inputs["input_ids"]},
-#                 [{"input_ids": inputs["source_input_ids"][:, 0]}],
-#                 {"sources->base": [0, 1, 2, 3, 4, 5]},
-#                 subspaces=[
-#                     [[_ for _ in range(low_rank_dimension)]]
-#                 ]
-#             )
-
-#             eval_labels.append(inputs["labels"].type(torch.long).squeeze() - min_class_value)
-#             eval_preds.append(torch.argmax(counterfactual_outputs[0], dim=1).squeeze())
-
-#     print(eval_preds)
-#     report = classification_report(torch.tensor(eval_labels).cpu(), torch.tensor(eval_preds).cpu(), output_dict=True)
-#     return report['accuracy']
-
 def eval_one_point(intervenable, eval_data, low_rank_dimension, batch_size = 2, min_class_value=3):
     # eval on all data
     eval_labels = []
@@ -141,6 +117,10 @@ def main():
         if args.causal_model_type =='simple':
             if cm_id == 1:
                 intervenable_model_path = 'mara589/X-intervenable-256-7'
+            elif cm_id == 2:
+                intervenable_model_path = 'mara589/Y-intervenable-256-7'
+            elif cm_id == 3:
+                intervenable_model_path = 'mara589/Z-intervenable-256-7'
             elif cm_id == 4:
                 intervenable_model_path = 'mara589/X-Y-Z-intervenable-256-7'
             else:
@@ -148,6 +128,10 @@ def main():
         else:
             if cm_id == 1:
                 intervenable_model_path = 'mara589/X-Y-intervenable-256-7'
+            elif cm_id == 2:
+                intervenable_model_path = 'mara589/X-Z-intervenable-256-7'
+            elif cm_id == 3:
+                intervenable_model_path = 'mara589/Y-Z-intervenable-256-7'
             else:
                 intervenable_model_path = ''
         
