@@ -6,14 +6,23 @@ import networkx as nx
 from matplotlib.cm import ScalarMappable
 import torch
 import pandas as pd
+import pickle
 
 def randNum(lower=1, upper=10):
     number = random.randint(lower, upper)
     return number
 
+def randBool():
+    return random.choice([True, False])
+
 def construct_arithmetic_input(data):
     x,y,z = data
     return {"X":x, "Y":y, "Z":z}
+
+def de_morgan_sampler():
+    X = randBool()
+    Y = randBool()
+    return {"X": X, "Y": Y}
 
 def arithmetic_input_sampler():
     A = randNum()
@@ -29,6 +38,14 @@ def ruled_arithmetic_input_sampler():
         C = randNum()
         if C > 7:
             return {"X":A, "Y":B, "Z":C}
+
+def iia_based_sampler(data_path, arrangements):
+    with open(data_path, 'rb') as file:
+        data_ids = pickle.load(file)
+    
+    random_id = random.choice(data_ids)
+    print(construct_arithmetic_input(arrangements[random_id]))
+    return construct_arithmetic_input(arrangements[random_id])
 
 def redundancy_input_sampler():
     A = randNum()
@@ -84,7 +101,10 @@ def sanity_check_visualization(results_path, save_dir_path, n_layers, train_id, 
 def evaluation_visualization(results_path, save_dir_path, n_layers, cm_id, experiment_id):
     data = {}
 
-    for name in ['original','XorYorZ<=6','X,Y,Z>6','XorYorZ>=5','X,Y,Z<5']:
+    # evals = ['original', 'iia_based', 'iia_based_new']
+    evals = ['original', 'iia_based_(X+Y)+Z', 'iia_based_(X)+Y+Z', 'iia_based_(X+Y+Z)']
+
+    for name in evals:
         dir_path = os.path.join(results_path, name)
 
         if name == 'sanity_check':
@@ -114,7 +134,7 @@ def evaluation_visualization(results_path, save_dir_path, n_layers, cm_id, exper
     ax.tick_params(axis='both', which='major', labelsize=8)
     ax.legend(fontsize=10)
 
-    save_file_name = f'{cm_id}_IIA_comparing_original_and_ruled_{experiment_id}.pdf'
+    save_file_name = f'{cm_id}_iia_based_{experiment_id}.pdf'
     file_path = os.path.join(save_dir_path, save_file_name)
     plt.savefig(file_path, dpi=300, bbox_inches="tight")
     plt.close()
@@ -122,9 +142,14 @@ def evaluation_visualization(results_path, save_dir_path, n_layers, cm_id, exper
 def evaluation_visualization_combined(results_path, save_dir_path, n_layers, arithmetic_family, experiment_id):
     
     cm_data = {}
-    evals = ['original','XorYorZ<=6','XorYorZ>=5', 'X<=5']
+    # evals = ['original', 'iia_based', 'iia_based_new']
+    evals = ['original', 'iia_based_(X+Y)+Z', 'iia_based_(X)+Y+Z', 'iia_based_(X+Y+Z)']
 
     for cm_id, model_info in arithmetic_family.causal_models.items():
+        
+        if cm_id == 4:
+            continue
+        
         data = {}
         for name in evals:
             dir_path = os.path.join(results_path, name)
@@ -152,7 +177,7 @@ def evaluation_visualization_combined(results_path, save_dir_path, n_layers, ari
             max_accuracy = 0
             best_model_id = None
             for cm_id, model_data in cm_data.items():
-                if model_data[name][layer] > max_accuracy:
+                if model_data[name][layer] >= max_accuracy:
                     max_accuracy = model_data[name][layer]
                     best_model_id = cm_id
             max_accuracy_dict[name][layer] = (max_accuracy, best_model_id)
@@ -181,7 +206,7 @@ def evaluation_visualization_combined(results_path, save_dir_path, n_layers, ari
     ax.tick_params(axis='both', which='major', labelsize=8)
     ax.legend(fontsize=10)
 
-    save_file_name = f'ablation_4_IIA_max_{experiment_id}.pdf'
+    save_file_name = f'iia_based_{experiment_id}.pdf'
     file_path = os.path.join(save_dir_path, save_file_name)
     plt.savefig(file_path, dpi=300, bbox_inches="tight")
     plt.close()
@@ -290,9 +315,8 @@ def compare_intermediate_vs_simple(arithmetic_results_path, simple_results_path,
         plt.savefig(file_path, dpi=300, bbox_inches="tight")
         plt.close()
 
-def visualize_graph(graph_encoding, label=''):
-    G = nx.from_numpy_matrix(graph_encoding.numpy(), create_using=nx.DiGraph)
-
+def visualize_graph(G, label=''):
+    
     edge_weights = [(u, v, d['weight']) for u, v, d in G.edges(data=True) if d['weight'] > 0]
     edge_colors = [d['weight'] for u, v, d in G.edges(data=True) if d['weight'] > 0]
 
