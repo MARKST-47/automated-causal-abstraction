@@ -34,7 +34,7 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.causal_model_type}. Can only choose between arithmetic or simple.")
 
-    args.results_path = os.path.join(args.results_path, args.causal_model_type)
+    # args.results_path = os.path.join(args.results_path, args.causal_model_type)
     save_plots_path = os.path.join(args.results_path, 'classification_plots')
     os.makedirs(save_plots_path, exist_ok=True)
     save_models_path = os.path.join(args.results_path, 'classification_models')
@@ -44,20 +44,17 @@ def main():
     numbers = range(1, 11)
     arrangements = list(product(numbers, repeat=3))
 
-    for layer in range(12):
+    labels = ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)']
 
-        set_seed(args.seed)
+    set_seed(args.seed)
 
-        args.layer = layer
+    for label in labels:
         merged_data = set()
+        data_path = os.path.join(args.results_path, f'classification_data/{args.low_rank_dimension}/data_{label}_{args.layer}.pkl')
+        with open(data_path, 'rb') as file:
+            data_ids = pickle.load(file)
+            merged_data.update(data_ids)
         
-        # merge data
-        for cm_id, _ in arithmetic_family.causal_models.items():
-            data_path = os.path.join(args.results_path, f'classification_data/{args.low_rank_dimension}/data_{cm_id}_{args.layer}.pkl')
-            with open(data_path, 'rb') as file:
-                data_ids = pickle.load(file)
-                merged_data.update(data_ids)
-            
         D = []
 
         # construct positive inputs
@@ -65,7 +62,7 @@ def main():
             input = construct_arithmetic_input(arrangements[id])
             input['class'] = 1
             D.append(input)
-        
+    
         # construct negative inputs
         for _ in range(len(merged_data)):
             id = random.choice(range(len(arrangements)))
@@ -74,11 +71,11 @@ def main():
             input = construct_arithmetic_input(arrangements[id])
             input['class'] = 0
             D.append(input)
-        
+    
         df = pd.DataFrame(D)
 
         features = df[['X', 'Y', 'Z']]
-        
+    
         # parity features
         features['X_even'] = features['X'] % 2 == 0
         features['Y_even'] = features['Y'] % 2 == 0
@@ -107,9 +104,9 @@ def main():
         # hyperparameter search
         param_grid = {
             'criterion': ['gini', 'entropy'], 
-            'max_depth': [1, 2],
+            'max_depth': [1, 2, 3, 4],
             'min_samples_split': [6, 7, 8, 9, 10],
-            'min_samples_leaf': [3, 4, 5],
+            'min_samples_leaf': [1, 2, 3, 4, 5, 6],
             'max_features': [None, 'sqrt', 'log2'],
             'ccp_alpha': [0.0, 0.001, 0.005]
         }
@@ -120,7 +117,7 @@ def main():
         grid_search.fit(X_train, y_train)
         model = grid_search.best_estimator_
 
-        print(f"Best parameters for layer {args.layer}:", grid_search.best_params_)
+        print(f"Best parameters for layer {args.layer} and model {label}:", grid_search.best_params_)
 
         # check accuracy on training data
         prediction = model.predict(X_train)
@@ -148,13 +145,13 @@ def main():
         plt.tight_layout()
         file_path = os.path.join(save_plots_path, f'{args.low_rank_dimension}')
         os.makedirs(file_path, exist_ok=True)
-        file_path = os.path.join(file_path, f"decision_tree_{args.layer}.pdf")
+        file_path = os.path.join(file_path, f"decision_tree_{label}_{args.layer}.pdf")
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
 
         file_path = os.path.join(save_models_path, f'{args.low_rank_dimension}')
         os.makedirs(file_path, exist_ok=True)
-        file_path = os.path.join(file_path, f"decision_tree_{args.layer}.pkl")
+        file_path = os.path.join(file_path, f"decision_tree_{label}_{args.layer}.pkl")
 
         with open(file_path, 'wb') as file:
             pickle.dump(model, file)

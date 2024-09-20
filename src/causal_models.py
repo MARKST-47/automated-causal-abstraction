@@ -216,6 +216,10 @@ class DeMorgansLawCausalModels(CausalModelFamily):
             self.op1 = op_not
         else:
             self.op1 = op_empty
+            if self.binop == 'and':
+                self.binop = binop_and
+            elif self.binop == 'or':
+                self.binop = binop_or
         
         if self.op2 == 'not':
             self.op2 = op_not
@@ -282,13 +286,25 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         if self.op1 == op_not:
             if self.binop == binop_and:
-                print('yes')
                 self.binop = binop_or
             elif self.binop == binop_or:
-                print('no')
                 self.binop = binop_and
         else:
             self.op1 = op_empty
+        
+        if self.op1 == 'not':
+            if self.binop == 'and':
+                self.binop = binop_or
+            elif self.binop == 'or':
+                self.binop = binop_and
+
+            self.op1 = op_not
+        else:
+            self.op1 = op_empty
+            if self.binop == 'and':
+                self.binop = binop_and
+            elif self.binop == 'or':
+                self.binop = binop_or
 
         functions = {"X":FILLER, "Y":FILLER,
                      "X'": lambda x: self.op2(x),

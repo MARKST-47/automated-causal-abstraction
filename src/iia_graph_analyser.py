@@ -37,11 +37,11 @@ def main():
     cliques_info_path = os.path.join(args.results_path, 'cliques_info')
     os.makedirs(cliques_info_path, exist_ok=True)
 
-    # labels = ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)']
-    labels = ['(X+Y+Z)']
+    # labels = ['(X)+Y+Z', 'X+(Y)+Z', 'X+Y+(Z)', '(X+Y)+Z', '(X+Z)+Y', 'X+(Y+Z)']
+    labels = ['X+(Y+Z)'] #, 'X+(Y)+Z', 'X+Y+(Z)', '(X+Y)+Z', '(X+Z)+Y', 'X+(Y+Z)']
 
-    # limits = [num for num in range(10, 1001, 20)]
-    # limits.append(1000)
+    limits = [num for num in range(10, 1001, 20)]
+    limits.append(1000)
     # print(len(limits))
 
     # all_accs = {}
@@ -52,34 +52,29 @@ def main():
         accs = []
 
         print(f'Loading graph for lrd {args.low_rank_dimension}, layer {args.layer}, model {label}')
-        graph_path = os.path.join(args.results_path, f'graphs_3/{label}_graph_{args.low_rank_dimension}_{args.layer}.pt')
+        graph_path = os.path.join(args.results_path, f'graphs/{label}_graph_{args.low_rank_dimension}_{args.layer}.pt')
         graph = torch.load(graph_path)
-        # mask = (graph == 1).float()
-        # graph = graph * mask
         graph.fill_diagonal_(0)
 
         print('Constructing graph..')
         G = nx.from_numpy_array(graph.numpy())
-        # G = G.subgraph([990, 991, 992, 993, 994, 995, 996, 997, 998, 999])
-        # visualize_graph(G, label=label)
-        # print(G.nodes())
 
         node_degrees = dict(G.degree())
         sorted_nodes = sorted(node_degrees, key=node_degrees.get, reverse=True)
 
-        if label == '(X)+Y+Z':
-            limits = [10]
-            # limits = [num for num in range(10, 501, 20)]
-            # limits.append(500)
-        elif label == '(X+Y)+Z':
-            # limits = [num for num in range(10, 501, 20)]
-            # limits.append(500)
-            limits = [10]
-        else:
-            # limits = [500]
-            limits = [num for num in range(10, 1001, 20)]
-            limits.append(1000)
-            # limits = [20]
+        # if label == '(X)+Y+Z':
+        #     limits = [210]
+        #     # limits = [num for num in range(10, 1001, 20)]
+        #     # limits.append(1000)
+        # elif label == '(X+Y)+Z':
+        #     # limits = [num for num in range(10, 790, 20)]
+        #     # limits.append(1000)
+        #     limits = [590]
+        # else:
+        #     # limits = [500]
+        #     limits = [num for num in range(10, 201, 20)]
+        #     limits.append(200)
+        #     # limits = [20]
 
         # limits = [num for num in range(10, 1001, 20)]
         # limits.append(1000)
@@ -89,7 +84,6 @@ def main():
 
             args.top_k = top_k
 
-            # exclude_list = set(top_k_nodes)
             temp_exclude_list = exclude_list.copy()
             top_k_nodes = []
 
@@ -124,15 +118,6 @@ def main():
             iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True))/(num_nodes*(num_nodes - 1)/2)
             accs.append((top_k, iia))
             print(top_k, iia)
-
-            # check IIA on the rest of the nodes not selected in top_k
-
-            # all_nodes_in_G = set(G.nodes())
-            # nodes_not_in_subgraph = all_nodes_in_G - set(top_k_nodes)
-            # subgraph = G.subgraph(nodes_not_in_subgraph)
-            # num_nodes = subgraph.number_of_nodes()
-            # iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True))/(num_nodes*(num_nodes - 1)/2)
-            # print(top_k, iia)
             
             # if label == '(X)+Y+Z' or label == '(X+Y)+Z':
             #     exclude_list.update(top_k_nodes)

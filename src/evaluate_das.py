@@ -11,9 +11,11 @@ from pyvene import set_seed
 import argparse
 from itertools import product
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results, construct_arithmetic_input, ruled_arithmetic_input_sampler
+from utils import arithmetic_input_sampler, save_results, construct_arithmetic_input, ruled_arithmetic_input_sampler, iia_based_sampler
+import pickle
 
-from transformers import (GPT2Tokenizer,
+from transformers import (AutoTokenizer,
+                          GPT2Tokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
 
@@ -92,23 +94,21 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
 
             eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
             eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+
     report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
     return report
 
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
-    parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--model_path', type=str, default='mara589/arithmetic-gpt2', help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
-    parser.add_argument('--experiment', type=str, choices=['', 'original', 'ruled'], default='')
+    parser.add_argument('--experiment', type=str, choices=['', 'original', 'ruled', 'iia_based'], default='')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
-
-    if not os.path.exists(args.model_path):
-        raise argparse.ArgumentTypeError("Invalid model_path. Path does not exist.")
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -119,14 +119,10 @@ def main():
     os.makedirs(save_dir_path, exist_ok=True)
     
     set_seed(args.seed)
-    total_step = 0
-    min_class_value = 3
-    
-    tokenizer = load_tokenizer('gpt2')
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     model_config = GPT2Config.from_pretrained(args.model_path)
-    model_config.pad_token_id = tokenizer.pad_token_id
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
-    model.resize_token_embeddings(len(tokenizer))
 
     if args.causal_model_type == 'arithmetic':
         arithmetic_family = ArithmeticCausalModels()
@@ -147,6 +143,8 @@ def main():
         sampler = arithmetic_input_sampler
     elif args.experiment == 'ruled':
         sampler = ruled_arithmetic_input_sampler
+    elif args.experiment == 'iia_based':
+        print('iia_based')
     else:
         raise ValueError(f"Invalid causal model type: {args.experiment}. Can only choose between arithmetic or simple.")
 
@@ -155,9 +153,9 @@ def main():
         # for layer in [5,6,7,8,9]:
         # for layer in [10,11]:
 
-            for cm_id, _ in arithmetic_family.causal_models.items():
-                # if cm_id == 2 or cm_id == 3:
-                #     continue
+            for cm_id, model_info in arithmetic_family.causal_models.items():
+                if cm_id == 2 or cm_id == 3 or cm_id == 4:
+                    continue
 
                 intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/cm_{cm_id}/intervenable_{low_rank_dimension}_{layer}')
                 intervenable = IntervenableModel.load(intervenable_model_path, model=model)
@@ -166,10 +164,21 @@ def main():
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
 
-                    if args.causal_model_type == 'simple' or args.experiment == 'original' or args.experiment == 'ruled':
+                    if args.causal_model_type == 'simple' or args.experiment == 'original' or args.experiment == 'ruled' or args.experiment == 'iia_based':
                         if test_id != cm_id:
                             continue
 
+                    if args.experiment == 'iia_based':
+
+                        data_path=f'/home/mara/workspace/LLM_causal_model_learning/low_iia_data.pkl'
+                        with open(data_path, 'rb') as file:
+                            data_ids = pickle.load(file)
+                    
+                        def sampler():
+                            random_id = random.choice(data_ids)
+                            # print(construct_arithmetic_input(arrangements[random_id]))
+                            return construct_arithmetic_input(arrangements[random_id])
+                    
                     testing_counterfactual_data = test_model_info['causal_model'].generate_counterfactual_dataset(
                         args.n_testing,
                         intervention_id,
@@ -178,6 +187,9 @@ def main():
                         sampler=sampler,
                         inputFunction=lambda x: tokenized_cache[tuple(x.values())]
                     )
+
+                    print(testing_counterfactual_data)
+                    return
 
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
                     save_results(args.results_path, report, layer, low_rank_dimension, cm_id, test_id)
