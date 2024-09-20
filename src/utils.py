@@ -7,6 +7,7 @@ from matplotlib.cm import ScalarMappable
 import torch
 import pandas as pd
 import pickle
+import itertools
 
 def randNum(lower=1, upper=10):
     number = random.randint(lower, upper)
@@ -15,14 +16,45 @@ def randNum(lower=1, upper=10):
 def randBool():
     return random.choice([True, False])
 
+def randMorgan():
+    return [
+        random.choice(['True', 'False']),  # X
+        random.choice(['True', 'False']),  # Y
+        *[random.choice(['not', '']) for _ in range(3)],  # Op1, Op2, Op3
+        random.choice(['and', 'or'])  # B
+    ]
+
+def generate_all_combinations_de_morgan():
+    values = {
+        'X': ['True', 'False'],
+        'Y': ['True', 'False'],
+        'Op1': ['not', 'empty'],
+        'Op2': ['not', 'empty'],
+        'Op3': ['not', 'empty'],
+        'B': ['and', 'or']
+    }
+
+    all_combinations = list(itertools.product(*values.values()))
+    return all_combinations
+
+def construct_de_morgan_input(data):
+    x,y,op1,op2,op3,b = data
+    return {'X': x, 'Y': y, 'Op1': op1, 'Op2': op2, 'Op3': op3, 'B':b}
+
 def construct_arithmetic_input(data):
     x,y,z = data
     return {"X":x, "Y":y, "Z":z}
 
 def de_morgan_sampler():
-    X = randBool()
-    Y = randBool()
-    return {"X": X, "Y": Y}
+
+    X = random.choice(['True', 'False'])
+    Y = random.choice(['True', 'False'])
+    Op1 = random.choice(['not', 'empty'])
+    Op2 = random.choice(['not', 'empty'])
+    Op3 = random.choice(['not', 'empty'])
+    B = random.choice(['and', 'or'])
+
+    return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
 
 def arithmetic_input_sampler():
     A = randNum()

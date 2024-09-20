@@ -1,8 +1,10 @@
 from typing import Dict, Any
 from abc import ABC, abstractmethod
-from utils import randNum, randBool
-from my_pyvene.data_generators.causal_model import CausalModel
+from src.utils import randNum, randMorgan
+from src.my_pyvene.data_generators.causal_model import CausalModel
 # from pyvene import CausalModel
+import numpy as np
+import ast
 
 class CausalModelFamily(ABC): # abstract base class
     def __init__(self):
@@ -183,150 +185,137 @@ class SimpleSummingCausalModels(CausalModelFamily):
 
 
 class DeMorgansLawCausalModels(CausalModelFamily):
-    def __init__(self, op1, op2, op3, binop):
-        self.op1 = op1
-        self.op2 = op2
-        self.op3 = op3
-        self.binop = binop
+    def __init__(self):
         super().__init__()
     
     def construct_default(self):
 
-        def FILLER():
-            return reps[0]
-        
-        def binop_or(x,y):
-            return x or y
-        
-        def binop_and(x,y):
-            return x and y
-        
-        def op_not(x):
-            return not x
-        
-        def op_empty(x):
-            return x
-        
-        if self.op1 == 'not':
-            if self.binop == 'and':
-                self.binop = binop_or
-            elif self.binop == 'or':
-                self.binop = binop_and
-
-            self.op1 = op_not
-        else:
-            self.op1 = op_empty
-            if self.binop == 'and':
-                self.binop = binop_and
-            elif self.binop == 'or':
-                self.binop = binop_or
-        
-        if self.op2 == 'not':
-            self.op2 = op_not
-        else:
-            self.op2 = op_empty
-
-        if self.op3 == 'not':
-            self.op3 = op_not
-        else:
-            self.op3 = op_empty
-
         # OP1(OP2(A)) OP1(BIN) OP1(OP3(B))
 
-        variables =  ["X", "Y", "X'", "Y'", "P", "W", "O"]
+        variables =  ["X", "Y", "X'", "Y'", "P", "W", "O", "Op1", "Op2", "Op3", "B"]
         number_of_entities = 20
 
-        reps = [randBool() for _ in range(number_of_entities)]
-        values = {variable:reps for variable in ["X", "Y"]}
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
         values["X'"] = [True, False]
         values["Y'"] = [True, False]
         values["P"] = [True, False]
         values["W"] = [True, False]
         values["O"] = [True, False]
 
-        functions = {"X":FILLER, "Y":FILLER,
-                     "X'": lambda x: self.op2(x),
-                     "Y'": lambda x: self.op3(x),
-                     "P": lambda x: self.op1(x),
-                     "W": lambda x: self.op1(x),
-                     "O": lambda x, y: self.binop(x, y)}
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'not' else ast.literal_eval(x),
+                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'not' else ast.literal_eval(y),
+                     "P": lambda x, op1: not x if op1 == 'not' else x,
+                     "W": lambda x, op1: not x if op1 == 'not' else x,
+                     "O": lambda x, y, op1, b: (
+                        x or y if op1 == 'not' and b == 'and' else
+                        x and y if op1 == 'not' and b == 'or' else
+                        x and y if op1 == '' and b == 'and' else
+                        x or y if op1 == '' and b == 'or' else
+                        True
+                    )}
         
         parents = {
-            "X":[], "Y":[],
-            "X'":["X"],
-            "Y'": ["Y"],
-            "P":["X'"],
-            "W": ["Y'"],
-            "O":["P", "W"]
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "X'":["X", "Op2"],
+            "Y'": ["Y", "Op3"],
+            "P":["X'", "Op1"],
+            "W": ["Y'", "Op1"],
+            "O":["P", "W", "Op1", "B"]
         }
 
         pos = {
             "X": (1, 0),
-            "Y": (2, 0),
-            "X'": (1, 1),
-            "Y'": (2, 1),
-            "P": (1, 2),
-            "W": (2, 2),
-            "O": (1.5, 3),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "X'": (1.5, 1),
+            "Y'": (4.5, 1),
+            "P": (2, 2),
+            "W": (3.5, 2),
+            "O": (3, 3),
         }
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1(OP2(A))_OP1(BIN)_OP1(OP3(B))")
 
         # OP1(OP2(A) BIN OP3(B))
 
-        variables =  ["X", "Y", "X'", "Y'", "P", "O"]
+        variables =  ["X", "Y", "X'", "Y'", "P", "O", "Op1", "Op2", "Op3", "B"]
         number_of_entities = 20
 
-        reps = [randBool() for _ in range(number_of_entities)]
-        values = {variable:reps for variable in ["X", "Y"]}
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
         values["X'"] = [True, False]
         values["Y'"] = [True, False]
         values["P"] = [True, False]
         values["O"] = [True, False]
 
-        if self.op1 == op_not:
-            if self.binop == binop_and:
-                self.binop = binop_or
-            elif self.binop == binop_or:
-                self.binop = binop_and
-        else:
-            self.op1 = op_empty
+        def FILLER_XY():
+            return reps[:,0][0]
         
-        if self.op1 == 'not':
-            if self.binop == 'and':
-                self.binop = binop_or
-            elif self.binop == 'or':
-                self.binop = binop_and
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
 
-            self.op1 = op_not
-        else:
-            self.op1 = op_empty
-            if self.binop == 'and':
-                self.binop = binop_and
-            elif self.binop == 'or':
-                self.binop = binop_or
-
-        functions = {"X":FILLER, "Y":FILLER,
-                     "X'": lambda x: self.op2(x),
-                     "Y'": lambda x: self.op3(x),
-                     "P": lambda x,y: self.binop(x,y),
-                     "O": lambda x: self.op1(x)}
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'not' else ast.literal_eval(x),
+                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'not' else ast.literal_eval(y),
+                     "P": lambda x, y, b: x and y if b == 'and' else x or y,
+                     "O": lambda p, op1: not p if op1 == 'not' else p}
         
         parents = {
-            "X":[], "Y":[],
-            "X'":["X"],
-            "Y'": ["Y"],
-            "P":["X'", "Y'"],
-            "O":["P"]
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "X'":["X", "Op2"],
+            "Y'": ["Y", "Op3"],
+            "P":["X'", "Y'", "B"],
+            "O":["P", "Op1"]
         }
 
         pos = {
             "X": (1, 0),
-            "Y": (2, 0),
-            "X'": (1, 1),
-            "Y'": (2, 1),
-            "P": (1.5, 2),
-            "O": (1.5, 3),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "X'": (1.5, 1),
+            "Y'": (4.5, 1),
+            "P": (5.5, 2),
+            "O": (3, 3),
         }
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1(OP2(A)_BIN_OP3(B))")
