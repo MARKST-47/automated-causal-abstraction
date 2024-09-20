@@ -7,9 +7,8 @@ from pyvene import set_seed
 import torch
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
 import networkx as nx
-from utils import filter_by_max_length
 from networkx.readwrite import json_graph
-from clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic, MaxCliqueHeuristic_v2, RemovalHeuristic
+from LLM_causal_model_learning.src.clique_version.clique_finders import BranchAndBoundHeuristic, DegreeHeuristic, ExhaustiveCliqueFinder, MaxCliqueHeuristic, MaxCliqueHeuristic_v2, RemovalHeuristic
 
 def pairwise_node_overlap(G1, G2):
     """Calculates the number of overlapping nodes between two NetworkX graphs."""
