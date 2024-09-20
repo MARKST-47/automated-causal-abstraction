@@ -513,7 +513,7 @@ class IntervenableModel(nn.Module):
             )
 
     @staticmethod
-    def load(load_directory, model, local_directory=None, from_huggingface_hub=False):
+    def load(load_directory, model, local_directory=None, from_huggingface_hub=False, subfolder=None):
         """
         Load interventions from disk or hub
         """
@@ -526,9 +526,15 @@ class IntervenableModel(nn.Module):
                 local_dir=local_directory,
             )
 
+        if subfolder:
+            load_directory = os.path.join(load_directory, subfolder)
+
         # load config
-        saving_config = IntervenableConfig.from_pretrained(load_directory)
+        saving_config = IntervenableConfig.from_pretrained(load_directory, subfolder=subfolder)
         casted_intervention_types = []
+
+        if subfolder:
+            load_directory = os.path.join(load_directory, subfolder)
 
         for type_str in saving_config.intervention_types:
             casted_intervention_types += [get_type_from_string(type_str)]
