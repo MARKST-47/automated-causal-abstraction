@@ -152,7 +152,7 @@ class CausalModel:
         del paths[1]
         return paths
 
-    def print_setting(self, total_setting):
+    def print_setting(self, total_setting, fig_name=''):
         relabeler = {
             var: var + ": " + str(total_setting[var]) for var in self.variables
         }
@@ -171,7 +171,11 @@ class CausalModel:
             for var in self.pos:
                 newpos[relabeler[var]] = self.pos[var]
         nx.draw_networkx(G, with_labels=True, node_color="green", pos=newpos)
-        plt.show()
+        if fig_name != '':
+            plt.savefig(f'{fig_name}.png')
+            plt.close()
+        else:
+            plt.show()
 
     def run_forward(self, intervention=None):
         total_setting = defaultdict(None)

@@ -526,9 +526,6 @@ class IntervenableModel(nn.Module):
                 local_dir=local_directory,
             )
 
-        if subfolder:
-            load_directory = os.path.join(load_directory, subfolder)
-
         # load config
         saving_config = IntervenableConfig.from_pretrained(load_directory, subfolder=subfolder)
         casted_intervention_types = []
