@@ -63,7 +63,7 @@ def main():
 
     os.makedirs(args.results_path, exist_ok=True)
 
-    save_graphs_path = os.path.join(args.results_path, 'graphs_test')
+    save_graphs_path = os.path.join(args.results_path, 'graphs')
     os.makedirs(save_graphs_path, exist_ok=True)
     
     set_seed(args.seed)
