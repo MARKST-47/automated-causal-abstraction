@@ -33,20 +33,25 @@ def main():
     cliques_info_path = os.path.join(args.results_path, 'cliques_info')
     os.makedirs(cliques_info_path, exist_ok=True)
 
-    all_labers = [
-                  ['(X)+Y+Z', '(X+Y+Z)'], ['X+(Y)+Z', '(X+Y+Z)'], ['X+Y+(Z)', '(X+Y+Z)'],
-                  ['(X+Y)+Z', '(X+Y+Z)'], ['(X+Z)+Y', '(X+Y+Z)'], ['X+(Y+Z)', '(X+Y+Z)'],
-                  ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                  ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                  ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
-                  ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
-                  ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)'],
-                  ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)'],
-                  ['(X)+Y+Z', 'X+(Y)+Z', 'X+Y+(Z)', '(X+Y)+Z', '(X+Z)+Y', 'X+(Y+Z)', '(X+Y+Z)']]
+    all_labels = {
+                  '1': ['(X)+Y+Z', '(X+Y+Z)'], 
+                  '2': ['X+(Y)+Z', '(X+Y+Z)'], 
+                  '3': ['X+Y+(Z)', '(X+Y+Z)'],
+                  '4': ['(X+Y)+Z', '(X+Y+Z)'], 
+                  '5': ['(X+Z)+Y', '(X+Y+Z)'], 
+                  '6': ['X+(Y+Z)', '(X+Y+Z)'],
+                  '7': ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                  '8': ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                  '9': ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
+                  '10': ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
+                  '11': ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)'],
+                  '12': ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)'],
+                  '13': ['(X)+Y+Z', 'X+(Y)+Z', 'X+Y+(Z)', '(X+Y)+Z', '(X+Z)+Y', 'X+(Y+Z)', '(X+Y+Z)']
+                }
     
     # all_faithfulness = [1.0, 0.95, 0.9, 0.8, 0.7, 0.6]
 
-    for cm_id, labels in enumerate(all_labers):
+    for cm_id, labels in all_labels.items():
 
         print(labels)
 
@@ -139,8 +144,8 @@ def main():
                     break
 
             data_path = os.path.join(top_k_path, f'exp_{cm_id}_{label}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
-            
-            with open(data_path, 'a', newline='') as f:
+
+            with open(data_path, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['top_k', 'iia'])
                 for top_k, iia in accs:
