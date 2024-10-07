@@ -27,14 +27,18 @@ def main():
     data_division_path = os.path.join(args.results_path, 'divided_data')
     os.makedirs(data_division_path, exist_ok=True)
 
+    top_k_path = os.path.join(args.results_path, 'top_k_results')
+    os.makedirs(top_k_path, exist_ok=True)
+
     cliques_info_path = os.path.join(args.results_path, 'cliques_info')
     os.makedirs(cliques_info_path, exist_ok=True)
 
-    all_labers = [['(X)+Y+Z'], ['X+(Y)+Z'], ['X+Y+(Z)'],
-                  ['(X+Y)+Z'], ['(X+Z)+Y'], ['X+(Y+Z)'],
-                  ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                  ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                  ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
+    all_labers = [
+                #   ['(X)+Y+Z', '(X+Y+Z)'], ['X+(Y)+Z', '(X+Y+Z)'], ['X+Y+(Z)', '(X+Y+Z)'],
+                #   ['(X+Y)+Z', '(X+Y+Z)'], ['(X+Z)+Y', '(X+Y+Z)'], ['X+(Y+Z)', '(X+Y+Z)'],
+                #   ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                #   ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                #   ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
                   ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
                   ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)'],
                   ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)'],
@@ -42,7 +46,9 @@ def main():
     
     # all_faithfulness = [1.0, 0.95, 0.9, 0.8, 0.7, 0.6]
 
-    for labels in all_labers:
+    for cm_id, labels in enumerate(all_labers):
+
+        print(labels)
 
         exclude_list = set()
 
@@ -79,11 +85,24 @@ def main():
             if label == '(X+Y+Z)':
                 limits = [1000 - len(exclude_list)]
 
-            print(limits)
-
             for top_k in limits:
 
                 args.top_k = top_k
+
+                if label == '(X+Y+Z)':
+
+                    subgraph = G.subgraph(set(G.nodes()) - exclude_list)
+                    num_nodes = subgraph.number_of_nodes()
+                    iia = sum(data['weight'] for _, _, data in subgraph.edges(data=True))/(num_nodes*(num_nodes - 1)/2)
+                    accs.append((top_k, iia))
+                    print(top_k, iia)
+
+                    data_path = os.path.join(data_division_path, f'exp_{cm_id}_{label}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
+                
+                    with open(data_path, 'wb') as f:
+                        pickle.dump(temp_top_k_nodes, f)
+                    
+                    continue
 
                 temp_exclude_list = exclude_list.copy()
                 top_k_nodes = []
@@ -126,18 +145,16 @@ def main():
                 if args.faithfulness > iia:
                     exclude_list.update(temp_top_k_nodes)
 
-                    data_path = os.path.join(data_division_path, f'{args.faithfulness}_{label}_layer_{args.layer}.pkl')
+                    data_path = os.path.join(data_division_path, f'exp_{cm_id}_{label}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
                 
                     with open(data_path, 'wb') as f:
                         pickle.dump(temp_top_k_nodes, f)
 
                     break
 
-            file_name = f'{args.faithfulness}_{label}_iias_top_k.txt'
-            if os.path.isfile(file_name):
-                os.remove(file_name)
+            data_path = os.path.join(top_k_path, f'exp_{cm_id}_{label}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
             
-            with open(file_name, 'a', newline='') as f:
+            with open(data_path, 'a', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerow(['top_k', 'iia'])
                 for top_k, iia in accs:
