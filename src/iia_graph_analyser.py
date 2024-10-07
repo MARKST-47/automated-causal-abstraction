@@ -34,11 +34,11 @@ def main():
     os.makedirs(cliques_info_path, exist_ok=True)
 
     all_labers = [
-                #   ['(X)+Y+Z', '(X+Y+Z)'], ['X+(Y)+Z', '(X+Y+Z)'], ['X+Y+(Z)', '(X+Y+Z)'],
-                #   ['(X+Y)+Z', '(X+Y+Z)'], ['(X+Z)+Y', '(X+Y+Z)'], ['X+(Y+Z)', '(X+Y+Z)'],
-                #   ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                #   ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
-                #   ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
+                  ['(X)+Y+Z', '(X+Y+Z)'], ['X+(Y)+Z', '(X+Y+Z)'], ['X+Y+(Z)', '(X+Y+Z)'],
+                  ['(X+Y)+Z', '(X+Y+Z)'], ['(X+Z)+Y', '(X+Y+Z)'], ['X+(Y+Z)', '(X+Y+Z)'],
+                  ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                  ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
+                  ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
                   ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
                   ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)'],
                   ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)'],
@@ -51,20 +51,6 @@ def main():
         print(labels)
 
         exclude_list = set()
-
-        # temp_labels = []
-        # for label in labels:
-        #     data_path = os.path.join(data_division_path, f'{args.faithfulness}_{label}_layer_{args.layer}.pkl')
-
-        #     if os.path.exists(data_path):
-        #         with open(data_path, 'rb') as f:
-        #             data = pickle.load(f)
-            
-        #         exclude_list.update(data)
-        #     else:
-        #         temp_labels.append(label)
-        
-        # labels = temp_labels
 
         for label in labels:
             accs = []
