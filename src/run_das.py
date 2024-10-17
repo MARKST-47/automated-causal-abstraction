@@ -26,6 +26,8 @@ from pyvene import (
 # from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
 # from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
     # default to left padding
@@ -82,7 +84,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
         for step, inputs in enumerate(epoch_iterator):
             for k, v in inputs.items():
                 if v is not None and isinstance(v, torch.Tensor):
-                    inputs[k] = v.to("cuda")
+                    inputs[k] = v.to(device)
             inputs["input_ids"] = inputs["input_ids"].squeeze()
             inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
             b_s = inputs["input_ids"].shape[0]
@@ -103,7 +105,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
-    parser.add_argument('--model_path', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--model_path', type=str, default="mara589/arithmetic-gpt2", help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
     parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
@@ -113,9 +115,6 @@ def main():
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
-
-    if not os.path.exists(args.model_path):
-        raise argparse.ArgumentTypeError("Invalid model_path. Path does not exist.")
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -150,7 +149,8 @@ def main():
             args.n_training,
             intervention_id,
             args.batch_size,
-            device="cuda:0",
+            # device="cuda:0",
+            device=device,
             sampler=arithmetic_input_sampler,
             inputFunction=tokenizePrompt
         )
@@ -170,7 +170,7 @@ def main():
                 )
 
                 intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
-                intervenable.set_device("cuda")
+                intervenable.set_device(device)
                 intervenable.disable_model_gradients()
 
                 optimizer_params = []
@@ -202,10 +202,11 @@ def main():
                     for step, inputs in enumerate(epoch_iterator):
                         for k, v in inputs.items():
                             if v is not None and isinstance(v, torch.Tensor):
-                                inputs[k] = v.to("cuda")
+                                inputs[k] = v.to(device)
                         inputs["input_ids"] = inputs["input_ids"].squeeze()
                         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
                         b_s = inputs["input_ids"].shape[0]
+                        print(inputs["source_input_ids"])
                         _, counterfactual_outputs = intervenable(
                             {"input_ids": inputs["input_ids"]},
                             [{"input_ids": inputs["source_input_ids"][:, 0]}],
@@ -249,7 +250,7 @@ def main():
                         args.n_testing,
                         intervention_id,
                         args.batch_size,
-                        device="cuda:0",
+                        device=device,
                         sampler=arithmetic_input_sampler,
                         inputFunction=tokenizePrompt
                     )
