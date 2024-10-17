@@ -2,7 +2,6 @@ import sys, os
 sys.path.append(os.path.join('..', '..'))
 
 import torch
-import random
 from sklearn.metrics import classification_report
 from datetime import datetime
 from datasets import Dataset
@@ -19,10 +18,13 @@ from transformers import (set_seed,
                           GPT2ForSequenceClassification)
 from src.causal_models import DeMorgansLawCausalModels
 from src.utils import de_morgan_sampler, generate_all_combinations_de_morgan, construct_de_morgan_input
-from itertools import product
 
 def load_tokenizer(tokenizer_path):
     tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
+
+    special_tokens = ["I", "Not", "False", "True", "And", "Or", "(", ")", " "]
+    tokenizer.add_tokens(special_tokens)
+
     # default to left padding
     tokenizer.padding_side = "left"
     # Define PAD Token = EOS Token = 50256
@@ -31,7 +33,7 @@ def load_tokenizer(tokenizer_path):
     return tokenizer
 
 def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1'] + ' (' if prompt['Op1'] else ''}{prompt['Op2'] + ' ' if prompt['Op2'] else ''}{prompt['X']} {prompt['B']} {prompt['Op3'] + ' ' if prompt['Op3'] else ''}{prompt['Y']}{')' if prompt['Op1'] else ''}"
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
     return tokenizer.encode(prompt, return_tensors='pt')
 
 def train(model, dataloader, optimizer, scheduler, device):
@@ -114,27 +116,27 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default='gpt2', help='model to finetune on the task')
-    parser.add_argument('--results_path', type=str, default='training_gpt2_results/', help='path to the results folder')
-    parser.add_argument('--epochs', type=int, default=50, help='epochs number for training')
+    parser.add_argument('--results_path', type=str, default='training_gpt2_binary_results/', help='path to the results folder')
+    parser.add_argument('--epochs', type=int, default=10, help='epochs number for training')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
-    parser.add_argument('--seed', type=int, default=123, help='experiment seed to be able to reproduce the results')
+    parser.add_argument('--seed', type=int, default=42, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
     os.makedirs(args.results_path, exist_ok=True)
+    save_dir = os.path.join(args.results_path, 'trained_gpt2forseq')
 
     set_seed(args.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    min_class_value = 3
-    offset = 3
     n_validation = round(0.2 * args.n_training)
     n_testing = round(0.1 * args.n_training)
 
-    # Sequence Classification with GPT2 n_labels=28
-    n_labels = 28 # 3 -..-> 31 => 10 included
+    # Sequence Classification with GPT2, binary outcome
+    n_labels = 2
     model_config = GPT2Config.from_pretrained(pretrained_model_name_or_path=args.model_path, num_labels=n_labels)
     model = GPT2ForSequenceClassification.from_pretrained(pretrained_model_name_or_path=args.model_path, config=model_config)
     tokenizer = load_tokenizer(args.model_path)
+    tokenizer.save_pretrained(save_dir)
 
     # generate data
     causal_model_family = DeMorgansLawCausalModels()
@@ -148,21 +150,20 @@ def main():
     for comb in all_comb:
         tokenized_cache[comb] = tokenizePrompt(construct_de_morgan_input(comb), tokenizer)
 
-
     train_inputs, train_labels = causal_model.generate_factual_dataset(args.n_training, de_morgan_sampler, inputFunction=lambda x: tokenized_cache[tuple(x.values())])
     val_inputs, val_labels = causal_model.generate_factual_dataset(n_validation, de_morgan_sampler, inputFunction=lambda x: tokenized_cache[tuple(x.values())])
     test_inputs, test_labels = causal_model.generate_factual_dataset(n_testing, de_morgan_sampler, inputFunction=lambda x: tokenized_cache[tuple(x.values())])
 
     train_ds = Dataset.from_dict(
         {
-            "labels": train_labels - offset,
+            "labels": train_labels,
             "input_ids": train_inputs
         }
     )
 
     val_ds = Dataset.from_dict(
         {
-            "labels": val_labels - offset,
+            "labels": val_labels,
             "input_ids": val_inputs
         }
     )
@@ -230,7 +231,7 @@ def main():
     # test model
     test_ds = Dataset.from_dict(
         {
-            "labels": test_labels - offset,
+            "labels": test_labels,
             "input_ids": test_inputs
         }
     )
@@ -241,9 +242,11 @@ def main():
     print(f"Average epoch loss on test_ds: {avg_epoch_loss}")
     evaluation_report = classification_report(true_labels, predictions_labels, labels=list(test_labels.squeeze()))
     print(evaluation_report)
+    
+    accuracy = accuracy_score(true_labels, predictions_labels)
+    print(f"Accuracy on test_ds: {accuracy}")
 
     # save model
-    save_dir = os.path.join(args.results_path, 'trained_gpt2forseq')
     model_config.save_pretrained(save_dir)
     model.save_pretrained(save_dir)
    

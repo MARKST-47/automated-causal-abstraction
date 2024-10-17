@@ -20,18 +20,18 @@ def randMorgan():
     return [
         random.choice(['True', 'False']),  # X
         random.choice(['True', 'False']),  # Y
-        *[random.choice(['not', '']) for _ in range(3)],  # Op1, Op2, Op3
-        random.choice(['and', 'or'])  # B
+        *[random.choice(['Not', 'I']) for _ in range(3)],  # Op1, Op2, Op3
+        random.choice(['And', 'Or'])  # B
     ]
 
 def generate_all_combinations_de_morgan():
     values = {
         'X': ['True', 'False'],
         'Y': ['True', 'False'],
-        'Op1': ['not', 'empty'],
-        'Op2': ['not', 'empty'],
-        'Op3': ['not', 'empty'],
-        'B': ['and', 'or']
+        'Op1': ['Not', 'I'],
+        'Op2': ['Not', 'I'],
+        'Op3': ['Not', 'I'],
+        'B': ['And', 'Or']
     }
 
     all_combinations = list(itertools.product(*values.values()))
@@ -49,10 +49,10 @@ def de_morgan_sampler():
 
     X = random.choice(['True', 'False'])
     Y = random.choice(['True', 'False'])
-    Op1 = random.choice(['not', 'empty'])
-    Op2 = random.choice(['not', 'empty'])
-    Op3 = random.choice(['not', 'empty'])
-    B = random.choice(['and', 'or'])
+    Op1 = random.choice(['Not', 'I'])
+    Op2 = random.choice(['Not', 'I'])
+    Op3 = random.choice(['Not', 'I'])
+    B = random.choice(['And', 'Or'])
 
     return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
 

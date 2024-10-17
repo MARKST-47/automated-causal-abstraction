@@ -370,7 +370,7 @@ class CausalModel:
                         sources.append(inputFunction(source))
                         source_dic[var] = source
                     for _ in range(maxlength - len(sources)):
-                        sources.append(torch.zeros(self.input_to_tensor(sampler()).shape))
+                        sources.append(torch.zeros(inputFunction(sampler()).shape))
                     example["labels"] = outputFunction(
                         self.run_interchange(base, source_dic)
                     ).to(device)
@@ -538,3 +538,55 @@ def simple_example():
 
 if __name__ == "__main__":
     simple_example()
+
+
+"""
+
+if batch["intervention_id"][0] == 2:  # Intervention on both high-level variables
+        _, counterfactual_outputs = handcrafted(
+            {"inputs_embeds": batch["input_ids"]},
+            [
+                {"inputs_embeds": batch["source_input_ids"][:, 0]},
+                {"inputs_embeds": batch["source_input_ids"][:, 1]},
+            ],
+            {
+                "sources->base": (
+                    [[[0]] * batch_size, [[0]] * batch_size],
+                    [[[0]] * batch_size, [[0]] * batch_size],
+                )
+            },
+            subspaces=[[[0]] * batch_size, [[1]] * batch_size],
+        )
+    elif (
+        batch["intervention_id"][0] == 0
+    ):  # Intervention on just the high-level variable 'WX'
+        _, counterfactual_outputs = handcrafted(
+            {"inputs_embeds": batch["input_ids"]},
+            [
+                {"inputs_embeds": batch["source_input_ids"][:, 0]},
+                None
+            ],
+            {
+            "sources->base": (
+                [[[0]] * batch_size, None],
+                [[[0]] * batch_size, None]
+                )
+            },
+            subspaces=[[[0]] * batch_size, None],
+        )
+    elif (
+        batch["intervention_id"][0] == 1
+    ):  # Intervention on just the high-level variable 'YZ'
+        _, counterfactual_outputs = handcrafted(
+            {"inputs_embeds": batch["input_ids"]},
+            [None, {"inputs_embeds": batch["source_input_ids"][:, 0]}],
+            {
+            "sources->base": (
+                    [None, [[0]] * batch_size],
+                    [None, [[0]] * batch_size]
+                )
+            },
+            subspaces=[None, [[1]] * batch_size],
+        )
+
+"""
