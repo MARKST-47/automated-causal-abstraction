@@ -1,7 +1,11 @@
 from typing import Dict, Any
 from abc import ABC, abstractmethod
+
 from src.utils import randNum, randMorgan
 from src.my_pyvene.data_generators.causal_model import CausalModel
+
+# from utils import randNum, randMorgan
+# from my_pyvene.data_generators.causal_model import CausalModel
 # from pyvene import CausalModel
 import numpy as np
 import ast
@@ -223,15 +227,15 @@ class DeMorgansLawCausalModels(CausalModelFamily):
             return reps[:,5][0]
 
         functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
-                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'not' else ast.literal_eval(x),
-                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'not' else ast.literal_eval(y),
-                     "P": lambda x, op1: not x if op1 == 'not' else x,
-                     "W": lambda x, op1: not x if op1 == 'not' else x,
+                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'Not' else ast.literal_eval(x),
+                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'Not' else ast.literal_eval(y),
+                     "P": lambda x, op1: not x if op1 == 'Not' else x,
+                     "W": lambda x, op1: not x if op1 == 'Not' else x,
                      "O": lambda x, y, op1, b: (
-                        x or y if op1 == 'not' and b == 'and' else
-                        x and y if op1 == 'not' and b == 'or' else
-                        x and y if op1 == '' and b == 'and' else
-                        x or y if op1 == '' and b == 'or' else
+                        x or y if op1 == 'Not' and b == 'And' else
+                        x and y if op1 == 'Not' and b == 'Or' else
+                        x and y if op1 == 'I' and b == 'And' else
+                        x or y if op1 == 'I' and b == 'Or' else
                         True
                     )}
         
@@ -292,10 +296,10 @@ class DeMorgansLawCausalModels(CausalModelFamily):
             return reps[:,5][0]
 
         functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
-                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'not' else ast.literal_eval(x),
-                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'not' else ast.literal_eval(y),
-                     "P": lambda x, y, b: x and y if b == 'and' else x or y,
-                     "O": lambda p, op1: not p if op1 == 'not' else p}
+                     "X'": lambda x, op2: not ast.literal_eval(x) if op2 == 'Not' else ast.literal_eval(x),
+                     "Y'": lambda y, op3: not ast.literal_eval(y) if op3 == 'Not' else ast.literal_eval(y),
+                     "P": lambda x, y, b: x and y if b == 'And' else x or y,
+                     "O": lambda p, op1: not p if op1 == 'Not' else p}
         
         parents = {
             "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
@@ -319,3 +323,380 @@ class DeMorgansLawCausalModels(CausalModelFamily):
         }
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1(OP2(A)_BIN_OP3(B))")
+
+        # OP1
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["Not", "I"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+        
+        def evaluate_logic(op1, op2, x, b, op3, y):
+
+            def apply_op(op, val):
+                return not val if op == 'Not' else val
+
+            x_val = x == 'True'
+            y_val = y == 'True'
+
+            result = apply_op(op2, x_val) and apply_op(op3, y_val) if b == 'And' else \
+                    apply_op(op2, x_val) or apply_op(op3, y_val)
+
+            return not result if op1 == 'Not' else result
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["Op1"],
+            "O":["P", "Op2", "X", "B", "Op3", "Y"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (3, 2),
+            "O": (3, 3),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1")
+
+        # OP2
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["Not", "I"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["Op2"],
+            "O":["Op1", "P", "X", "B", "Op3", "Y"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (2.5, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP2")
+
+        # Op3
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["Not", "I"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["Op3"],
+            "O":["Op1", "Op2", "X", "B", "P", "Y"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (4, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP3")
+        
+        # X
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["True", "False"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["X"],
+            "O":["Op1", "Op2", "P", "B", "Op3", "Y"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (1.2, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="X")
+
+        # Y
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["True", "False"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["Y"],
+            "O":["Op1", "Op2", "X", "B", "Op3", "P"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (3.5, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="Y")
+
+        # B
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = ["And", "Or"]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda x: x,
+                     "O": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y)}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["B"],
+            "O":["Op1", "Op2", "X", "P", "Op3", "Y"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (5, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="B")
+
+        # O
+
+        variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
+        number_of_entities = 20
+
+        reps = [randMorgan() for _ in range(number_of_entities)]
+        reps = np.array(reps)
+
+        values = {
+            "X": list(reps[:, 0]),
+            "Y": list(reps[:, 1]),
+            "Op1": list(reps[:, 2]),
+            "Op2": list(reps[:, 3]),
+            "Op3": list(reps[:, 4]),
+            "B": list(reps[:, 5])
+        }
+
+        values["P"] = [True, False]
+        values["O"] = [True, False]
+
+        def FILLER_XY():
+            return reps[:,0][0]
+        
+        def FILLER_OP():
+            return reps[:,3][0]
+        
+        def FILLER_BIN_OP():
+            return reps[:,5][0]
+
+        functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
+                     "P": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y),
+                     "O": lambda p: p}
+        
+        parents = {
+            "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
+            "P":["Op1", "Op2", "X", "B", "Op3", "Y"],
+            "O":["P"]
+        }
+
+        pos = {
+            "X": (1, 0),
+            "Op2": (2,0),
+            "Op1":(3,0),
+            "Y": (4, 0),
+            "Op3": (5,0),
+            "B": (6,0),
+            "P": (3, 1),
+            "O": (3, 2),
+        }
+
+        self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="O")
