@@ -164,13 +164,30 @@ def main():
         # for layer in range(model_config.n_layer):
         for layer in [0]:
 
-            intervenable_config = IntervenableConfig({
-                    "layer": layer,
-                    "component": "block_output",
-                    "low_rank_dimension": low_rank_dimension,
-                    "unit":"pos",
-                    "max_number_of_units": 14
-                },
+            intervenable_config = IntervenableConfig(
+                [
+                    {
+                        "layer": layer,
+                        "component": "block_output",
+                        "low_rank_dimension": low_rank_dimension,
+                        "unit":"pos",
+                        "max_number_of_units": 14
+                    },
+                    {
+                        "layer": layer,
+                        "component": "block_output",
+                        "low_rank_dimension": low_rank_dimension,
+                        "unit":"pos",
+                        "max_number_of_units": 14
+                    },
+                    {
+                        "layer": layer,
+                        "component": "block_output",
+                        "low_rank_dimension": low_rank_dimension,
+                        "unit":"pos",
+                        "max_number_of_units": 14
+                    }
+                ],
                 intervention_types=LowRankRotatedSpaceIntervention,
                 model_type=type(model)
             )
@@ -212,17 +229,151 @@ def main():
                     inputs["input_ids"] = inputs["input_ids"].squeeze().long()
                     inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
                     b_s = inputs["input_ids"].shape[0]
-                    if inputs["intervention_id"][0] == 0:
+                    if inputs["intervention_id"][0] == 0: # X'
                         _, counterfactual_outputs = intervenable(
                             {"input_ids": inputs["input_ids"]},
                             [
-                                {"input_ids": inputs["source_input_ids"][:, 0]}
+                                {"input_ids": inputs["source_input_ids"][:, 0]},
+                                None,
+                                None
                             ],
                             {
-                                "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+                                "sources->base": (
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, None],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, None],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, None]
+                                )
                             },
                             subspaces=[
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                None,
+                                None
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 1: # Y'
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                None,
+                                {"input_ids": inputs["source_input_ids"][:, 1]},
+                                None
+                            ],
+                            {
+                                "sources->base": (
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None],
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None],
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None]
+                                )
+                            },
+                            subspaces=[
+                                None,
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                None
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 2: # P
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                None,
+                                None,
+                                {"input_ids": inputs["source_input_ids"][:, 2]}
+                            ],
+                            {
+                                "sources->base": (
+                                    [None, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [None, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [None, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s]
+                                )
+                            },
+                            subspaces=[
+                                None,
+                                None,
                                 [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 3: # X' & Y'
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                {"input_ids": inputs["source_input_ids"][:, 0]},
+                                {"input_ids": inputs["source_input_ids"][:, 1]},
+                                None
+                            ],
+                            {
+                                "sources->base": (
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None]
+                                )
+                            },
+                            subspaces=[
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                None
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 4: # X' & P
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                {"input_ids": inputs["source_input_ids"][:, 0]},
+                                None,
+                                {"input_ids": inputs["source_input_ids"][:, 2]}
+                            ],
+                            {
+                                "sources->base": (
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s]
+                                )
+                            },
+                            subspaces=[
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                None,
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 5: # Y' & P
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                None,
+                                {"input_ids": inputs["source_input_ids"][:, 1]},
+                                {"input_ids": inputs["source_input_ids"][:, 2]}
+                            ],
+                            {
+                                "sources->base": (
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [None, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s]
+                                )
+                            },
+                            subspaces=[
+                                None,
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size,
+                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                            ]
+                        )
+                    elif inputs["intervention_id"][0] == 6: # X' & Y' & P
+                        _, counterfactual_outputs = intervenable(
+                            {"input_ids": inputs["input_ids"]},
+                            [
+                                {"input_ids": inputs["source_input_ids"][:, 0]},
+                                {"input_ids": inputs["source_input_ids"][:, 1]},
+                                {"input_ids": inputs["source_input_ids"][:, 2]}
+                            ],
+                            {
+                                "sources->base": (
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s],
+                                    [[[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s, [[0,1,2,3,4,5,6,7,8,9,10,11,12,13]] * b_s]
+                                )
+                            },
+                            subspaces=[
+                                [[_ for _ in range(low_rank_dimension)]] * b_s,
+                                [[_ for _ in range(low_rank_dimension)]] * b_s,
+                                [[_ for _ in range(low_rank_dimension)]] * b_s
                             ]
                         )
 
@@ -237,7 +388,7 @@ def main():
 
                     if args.gradient_accumulation_steps > 1:
                         loss = loss / args.gradient_accumulation_steps
-                    loss.backward()
+                    loss.backward(retain_graph=True) 
 
                     if total_step % args.gradient_accumulation_steps == 0:
                         optimizer.step()
