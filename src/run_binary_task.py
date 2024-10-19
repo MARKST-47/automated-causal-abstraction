@@ -77,7 +77,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', default='mara589/binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
-    parser.add_argument('--results_path', type=str, default='results/', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
+    parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training')
@@ -102,7 +103,7 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
 
     causal_model_family = DeMorgansLawCausalModels()
-    train_id = 9
+    train_id = args.train_id
     label = causal_model_family.get_label_by_id(train_id)
     causal_model = causal_model_family.get_model_by_id(train_id)
     # causal_model.print_structure(fig_name=f'{label}')
