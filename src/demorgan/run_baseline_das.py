@@ -1,5 +1,5 @@
-import sys, os
-sys.path.append(os.path.join('..', '..'))
+# import sys, os
+# sys.path.append(os.path.join('..', '..'))
 
 from sklearn.metrics import classification_report
 from tqdm import tqdm
@@ -9,8 +9,8 @@ import random
 from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
-from causal_models import DeMorgansLawCausalModels
-from utils import de_morgan_sampler, generate_all_combinations_de_morgan, construct_de_morgan_input, save_results
+from src.causal_models import DeMorgansLawCausalModels
+from src.utils import de_morgan_sampler, generate_all_combinations_de_morgan, construct_de_morgan_input, save_results
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
