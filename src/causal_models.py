@@ -1,8 +1,8 @@
 from typing import Dict, Any
 from abc import ABC, abstractmethod
 
-from src.utils import randNum, randMorgan
-from src.my_pyvene.data_generators.causal_model import CausalModel
+from utils import randNum, randMorgan
+from my_pyvene.data_generators.causal_model import CausalModel
 
 # from utils import randNum, randMorgan
 # from my_pyvene.data_generators.causal_model import CausalModel
