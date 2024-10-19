@@ -85,6 +85,9 @@ def main():
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu') 
+
     os.makedirs(args.results_path, exist_ok=True)
 
     save_dir_path = os.path.join(args.results_path, 'plots')
@@ -99,12 +102,12 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
 
     causal_model_family = DeMorgansLawCausalModels()
-    train_id = 3
+    train_id = 9
     label = causal_model_family.get_label_by_id(train_id)
     causal_model = causal_model_family.get_model_by_id(train_id)
-    print(f'Aligning with model {label}')
+    # causal_model.print_structure(fig_name=f'{label}')
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f'Aligning with model {label}')
 
     all_comb = generate_all_combinations_de_morgan()
 
@@ -126,7 +129,7 @@ def main():
     # for low_rank_dimension in [64, 128, 256]:
     for low_rank_dimension in [256]:
         # for layer in range(model_config.n_layer):
-        for layer in [0]:
+        for layer in [8]:
 
             intervenable_config = IntervenableConfig({
                     "layer": layer,
