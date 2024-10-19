@@ -740,7 +740,7 @@ class DeMorgansLawCausalModels(CausalModelFamily):
         def FILLER_BIN_OP():
             return reps[:,5][0]
         
-        def evaluate_logic(p, op1, y, op3, b):
+        def evaluate_logic_x_prim(p, op1, y, op3, b):
 
             def apply_op(op, val):
                 return not val if op == 'Not' else val
@@ -754,7 +754,7 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
                      "P": lambda x, op2: not(x == 'True') if op2 == 'Not' else x == 'True',
-                     "O": lambda p, op1, y, op3, b: evaluate_logic(p, op1, y, op3, b)}
+                     "O": lambda p, op1, y, op3, b: evaluate_logic_x_prim(p, op1, y, op3, b)}
         
         parents = {
             "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
