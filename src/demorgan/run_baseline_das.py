@@ -9,8 +9,8 @@ import random
 from tqdm import tqdm, trange
 from pyvene import count_parameters, set_seed
 import argparse
-from src.causal_models import DeMorgansLawCausalModels
-from src.utils import de_morgan_sampler, generate_all_combinations_de_morgan, construct_de_morgan_input, save_results
+from causal_models import DeMorgansLawCausalModels
+from utils import de_morgan_sampler, generate_all_combinations_de_morgan, construct_de_morgan_input, save_results
 
 from transformers import (GPT2Tokenizer,
                           GPT2Config,
