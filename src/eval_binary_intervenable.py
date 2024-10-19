@@ -102,7 +102,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default='mara589/binary-gpt2', help='path to the finetuned GPT2ForSequenceClassification on the binary task')
-    parser.add_argument('--results_path', type=str, default='results/binary', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
