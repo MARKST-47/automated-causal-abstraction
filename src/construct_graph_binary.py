@@ -9,9 +9,12 @@ from utils import generate_all_combinations_de_morgan, construct_de_morgan_input
 from transformers import (AutoTokenizer,
                           GPT2Config,
                           GPT2ForSequenceClassification)
-from my_pyvene.models.intervenable_base import IntervenableModel
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+from pyvene import (
+    IntervenableModel
+)
 
 def intervention_id(intervention):
     if "P" in intervention:
