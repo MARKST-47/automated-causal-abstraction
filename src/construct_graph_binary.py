@@ -110,16 +110,12 @@ def main():
 
     for i, base in enumerate(all_comb):
         base = construct_de_morgan_input(base)
-        print(base)
         for j, source in enumerate(all_comb):
 
             if i <= j:
                 break
 
             source = construct_de_morgan_input(source)
-
-            print(source)
-            return
             
             data = causal_model.generate_counterfactual_pairs(
                 base,
