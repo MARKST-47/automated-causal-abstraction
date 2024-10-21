@@ -12,7 +12,7 @@ from transformers import (AutoTokenizer,
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from pyvene import (
+from my_pyvene import (
     IntervenableModel
 )
 
@@ -92,13 +92,13 @@ def main():
 
     print(f'loading intervenable model {label} on layer {args.layer}, lrd {args.low_rank_dimension}') 
 
-    # intervenable_model_path = 'mara589/intervenable-models'
-    # subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
+    intervenable_model_path = 'mara589/intervenable-models'
+    subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
 
-    intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{args.low_rank_dimension}_{args.layer}')
-    intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+    # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{args.low_rank_dimension}_{args.layer}')
+    # intervenable = IntervenableModel.load(intervenable_model_path, model=model)
     
-    # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+    intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
     intervenable.set_device(device)
     intervenable.disable_model_gradients()
 
