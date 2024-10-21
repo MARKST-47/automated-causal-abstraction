@@ -399,6 +399,7 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1")
 
+        '''
         # OP2
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
@@ -1089,3 +1090,4 @@ class DeMorgansLawCausalModels(CausalModelFamily):
         }
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="B'")
+        '''
