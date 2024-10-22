@@ -70,13 +70,13 @@ def intervention_id(intervention):
         return 0
     
 def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
     return tokenizer.encode(prompt, return_tensors='pt')
 
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
-    parser.add_argument('--model_path', default='mara589/binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--model_path', default='mara589/binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the binary task')
     parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
@@ -137,7 +137,7 @@ def main():
                     "component": "block_output",
                     "low_rank_dimension": low_rank_dimension,
                     "unit":"pos",
-                    "max_number_of_units": 14
+                    "max_number_of_units": 15
                 },
                 intervention_types=LowRankRotatedSpaceIntervention,
                 model_type=type(model)
@@ -185,7 +185,7 @@ def main():
                         {"input_ids": inputs["input_ids"]},
                         [{"input_ids": inputs["source_input_ids"][:, 0]}],
                         {
-                            "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+                            "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
                         },
                         subspaces=[
                             [[_ for _ in range(low_rank_dimension)]] * args.batch_size
