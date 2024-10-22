@@ -334,7 +334,9 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         '''
 
+        '''
         # OP1
+
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
         number_of_entities = 20
@@ -399,7 +401,6 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="OP1")
 
-        '''
         # OP2
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
@@ -660,6 +661,8 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="B")
 
+        '''
+
         # O
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
@@ -712,6 +715,7 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="O")
 
+        '''
         # X'
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
