@@ -693,8 +693,8 @@ class DeMorgansLawCausalModels(CausalModelFamily):
             return reps[:,5][0]
 
         functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
-                     "P": lambda op1, op2, x, b, op3, y: evaluate_logic(op1, op2, x, b, op3, y),
-                     "O": lambda p: p}
+                     "P": lambda op1, op2, x, b, op3, y: 'True' if evaluate_logic(op1, op2, x, b, op3, y) else 'False',
+                     "O": lambda p: p == 'True'}
         
         parents = {
             "X":[], "Y":[], "Op1":[], "Op2":[], "Op3":[], "B": [],
