@@ -194,6 +194,19 @@ class DeMorgansLawCausalModels(CausalModelFamily):
     
     def construct_default(self):
 
+        def evaluate_logic(op1, op2, x, b, op3, y):
+
+            def apply_op(op, val):
+                return not val if op == 'Not' else val
+
+            x_val = x == 'True'
+            y_val = y == 'True'
+
+            result = apply_op(op2, x_val) and apply_op(op3, y_val) if b == 'And' else \
+                    apply_op(op2, x_val) or apply_op(op3, y_val)
+
+            return not result if op1 == 'Not' else result
+
         def apply_op_to_b(op, b):
             if op == 'Not':
                 if b == 'And':
@@ -364,19 +377,6 @@ class DeMorgansLawCausalModels(CausalModelFamily):
         
         def FILLER_BIN_OP():
             return reps[:,5][0]
-        
-        def evaluate_logic(op1, op2, x, b, op3, y):
-
-            def apply_op(op, val):
-                return not val if op == 'Not' else val
-
-            x_val = x == 'True'
-            y_val = y == 'True'
-
-            result = apply_op(op2, x_val) and apply_op(op3, y_val) if b == 'And' else \
-                    apply_op(op2, x_val) or apply_op(op3, y_val)
-
-            return not result if op1 == 'Not' else result
 
         functions = {"X":FILLER_XY, "Y":FILLER_XY, "Op1": FILLER_OP, "Op2": FILLER_OP, "Op3": FILLER_OP, "B": FILLER_BIN_OP,
                      "P": lambda x: x,
