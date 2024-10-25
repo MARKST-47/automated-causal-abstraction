@@ -70,7 +70,7 @@ def intervention_id(intervention):
         return 0
     
 def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
     return tokenizer.encode(prompt, return_tensors='pt')
 
 def main():
@@ -85,6 +85,11 @@ def main():
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
+
+    if args.model_path == 'mara589/binary-gpt2':
+        size_intervention = 14
+    else:
+        size_intervention = 15
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu') 
@@ -137,7 +142,7 @@ def main():
                     "component": "block_output",
                     "low_rank_dimension": low_rank_dimension,
                     "unit":"pos",
-                    "max_number_of_units": 15
+                    "max_number_of_units": size_intervention
                 },
                 intervention_types=LowRankRotatedSpaceIntervention,
                 model_type=type(model)
@@ -185,7 +190,7 @@ def main():
                         {"input_ids": inputs["input_ids"]},
                         [{"input_ids": inputs["source_input_ids"][:, 0]}],
                         {
-                            "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+                            "sources->base": list(range(size_intervention))
                         },
                         subspaces=[
                             [[_ for _ in range(low_rank_dimension)]] * args.batch_size
