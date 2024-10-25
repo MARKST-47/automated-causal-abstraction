@@ -347,7 +347,6 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         '''
 
-        '''
         # OP1
 
 
@@ -661,8 +660,6 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="B")
 
-        '''
-
         # O
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
@@ -680,7 +677,7 @@ class DeMorgansLawCausalModels(CausalModelFamily):
             "B": list(reps[:, 5])
         }
 
-        values["P"] = [True, False]
+        values["P"] = ["True", "False"]
         values["O"] = [True, False]
 
         def FILLER_XY():
@@ -715,7 +712,6 @@ class DeMorgansLawCausalModels(CausalModelFamily):
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="O")
 
-        '''
         # X'
 
         variables =  ["X", "Y", "P", "O", "Op1", "Op2", "Op3", "B"]
@@ -1094,4 +1090,3 @@ class DeMorgansLawCausalModels(CausalModelFamily):
         }
 
         self.add_model(CausalModel(variables, values, parents, functions, pos=pos), label="B'")
-        '''
