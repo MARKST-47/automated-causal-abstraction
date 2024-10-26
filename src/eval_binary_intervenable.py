@@ -146,7 +146,7 @@ def main():
         for layer in [8]:
 
             intervenable_model_path = 'mara589/intervenable-models'
-            subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
+            subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
             intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
             intervenable.set_device("cuda")
