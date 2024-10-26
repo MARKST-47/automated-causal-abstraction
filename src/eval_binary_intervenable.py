@@ -148,7 +148,7 @@ def main():
             subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
             intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
-            intervenable.set_device("cuda")
+            intervenable.set_device(device)
             intervenable.disable_model_gradients()
 
             testing_counterfactual_data = causal_model.generate_counterfactual_dataset(
