@@ -63,7 +63,7 @@ def intervention_id(intervention):
         return 0
     
 def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
     return tokenizer.encode(prompt, return_tensors='pt')
 
 def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, size_intervention, device):
