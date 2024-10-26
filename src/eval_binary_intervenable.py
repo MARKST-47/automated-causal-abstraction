@@ -61,10 +61,6 @@ def calculate_loss(logits, labels):
 def intervention_id(intervention):
     if "P" in intervention:
         return 0
-    
-def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
-    return tokenizer.encode(prompt, return_tensors='pt')
 
 def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, size_intervention, device):
     # eval on all data
@@ -113,9 +109,16 @@ def main():
     if args.model_path == 'mara589/binary-gpt2':
         size_intervention = 14
         intervenable_model_path = 'mara589/intervenable-models'
+        def tokenizePrompt(prompt, tokenizer):
+            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
+            return tokenizer.encode(prompt, return_tensors='pt')
+
     else:
         size_intervention = 15
         intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
+        def tokenizePrompt(prompt, tokenizer):
+            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+            return tokenizer.encode(prompt, return_tensors='pt')
 
     os.makedirs(args.results_path, exist_ok=True)
 

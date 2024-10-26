@@ -68,10 +68,6 @@ def calculate_loss(logits, labels):
 def intervention_id(intervention):
     if "P" in intervention:
         return 0
-    
-def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
-    return tokenizer.encode(prompt, return_tensors='pt')
 
 def main():
 
@@ -88,8 +84,14 @@ def main():
 
     if args.model_path == 'mara589/binary-gpt2':
         size_intervention = 14
+        def tokenizePrompt(prompt, tokenizer):
+            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
+            return tokenizer.encode(prompt, return_tensors='pt')
     else:
         size_intervention = 15
+        def tokenizePrompt(prompt, tokenizer):
+            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+            return tokenizer.encode(prompt, return_tensors='pt')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu') 
