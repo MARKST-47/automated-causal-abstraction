@@ -67,7 +67,7 @@ def tokenizePrompt(prompt, tokenizer):
     prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
     return tokenizer.encode(prompt, return_tensors='pt')
 
-def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, device):
+def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, size_intervention, device):
     # eval on all data
     eval_labels = []
     eval_preds = []
@@ -85,7 +85,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, d
                 {"input_ids": inputs["input_ids"]},
                 [{"input_ids": inputs["source_input_ids"][:, 0]}],
                 {
-                    "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+                    "sources->base": list(range(size_intervention))
                 },
                 subspaces=[
                     [[_ for _ in range(low_rank_dimension)]] * batch_size
@@ -110,6 +110,11 @@ def main():
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if args.model_path == 'mara589/binary-gpt2':
+        size_intervention = 14
+    else:
+        size_intervention = 15
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -140,8 +145,10 @@ def main():
         # for layer in range(model_config.n_layer):
         for layer in [8]:
 
-            intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
-            intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+            intervenable_model_path = 'mara589/intervenable-models'
+            subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
+            intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+
             intervenable.set_device("cuda")
             intervenable.disable_model_gradients()
 
@@ -154,7 +161,7 @@ def main():
                 inputFunction=lambda x: tokenized_cache[tuple(x.values())]
             )
 
-            report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, device)
+            report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
             save_results(args.results_path, report, layer, low_rank_dimension, label, label)
         
 if __name__ =="__main__":
