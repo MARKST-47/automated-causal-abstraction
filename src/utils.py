@@ -45,16 +45,37 @@ def construct_arithmetic_input(data):
     x,y,z = data
     return {"X":x, "Y":y, "Z":z}
 
+# def de_morgan_sampler():
+
+#     X = random.choice(['True', 'False'])
+#     Y = random.choice(['True', 'False'])
+#     Op1 = random.choice(['Not', 'I'])
+#     Op2 = random.choice(['Not', 'I'])
+#     Op3 = random.choice(['Not', 'I'])
+#     B = random.choice(['And', 'Or'])
+
+#     return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
+
 def de_morgan_sampler():
+    X_values = ['True', 'False']
+    Y_values = ['True', 'False']
+    Op_values = ['Not', 'I']
+    B_values = ['And', 'Or']
 
-    X = random.choice(['True', 'False'])
-    Y = random.choice(['True', 'False'])
-    Op1 = random.choice(['Not', 'I'])
-    Op2 = random.choice(['Not', 'I'])
-    Op3 = random.choice(['Not', 'I'])
-    B = random.choice(['And', 'Or'])
+    all_combinations = list(itertools.product(
+        X_values, Y_values, Op_values, Op_values, Op_values, B_values
+    ))
 
-    return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
+    chosen_combination = random.choice(all_combinations)
+
+    return {
+        'X': chosen_combination[0],
+        'Y': chosen_combination[1],
+        'Op1': chosen_combination[2],
+        'Op2': chosen_combination[3],
+        'Op3': chosen_combination[4],
+        'B': chosen_combination[5]
+        }
 
 def arithmetic_input_sampler():
     A = randNum()
