@@ -112,8 +112,10 @@ def main():
 
     if args.model_path == 'mara589/binary-gpt2':
         size_intervention = 14
+        intervenable_model_path = 'mara589/intervenable-models'
     else:
         size_intervention = 15
+        intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -144,7 +146,6 @@ def main():
         # for layer in range(model_config.n_layer):
         for layer in [8]:
 
-            intervenable_model_path = 'mara589/intervenable-models'
             subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
             intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
