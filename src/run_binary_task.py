@@ -135,7 +135,7 @@ def main():
     )
 
     # for low_rank_dimension in [64, 128, 256]:
-    for low_rank_dimension in [256]:
+    for low_rank_dimension in [128]:
         # for layer in range(model_config.n_layer):
         for layer in [8]:
 
