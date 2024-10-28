@@ -63,34 +63,47 @@ def run_process(all_labels, args, data_division_path, top_k_path, n_nodes=1000):
         visited_labels = []
 
         # greedy sort based on IIA
-        best_label, iia = greedy_selection_of_cm(list(set(labels) - set(['O'])), exclude_list, args.low_rank_dimension, args.layer, args.results_path)
+        # best_label, iia = greedy_selection_of_cm(list(set(labels) - set(['O'])), exclude_list, args.low_rank_dimension, args.layer, args.results_path)
+        best_label, iia = greedy_selection_of_cm(list(set(labels) - set(['(X+Y+Z)'])), exclude_list, args.low_rank_dimension, args.layer, args.results_path)
         visited_labels.append(best_label)
 
-        # if len(labels) >= 3:
+        if len(labels) >= 3:
 
-        #     if labels[0] == '(X)+Y+Z':
-        #         l = '1'
-        #     elif labels[0] == 'X+(Y)+Z':
-        #         l = '2'
-        #     elif labels[0] == 'X+Y+(Z)':
-        #         l = '3'
+            if best_label == '(X)+Y+Z':
+                l = '1'
+            elif best_label == 'X+(Y)+Z':
+                l = '2'
+            elif best_label == 'X+Y+(Z)':
+                l = '3'
+            elif best_label == '(X+Y)+Z':
+                l = '4'
+            elif best_label == '(X+Z)+Y':
+                l = '5'
+            elif best_label == 'X+(Y+Z)':
+                l = '6'
 
-        #     source_file = os.path.join(top_k_path, f'exp_{l}_{labels[0]}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
-        #     destination_file = os.path.join(top_k_path, f'exp_{cm_id}_{labels[0]}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
+            source_file = os.path.join(top_k_path, f'exp_{l}_{best_label}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
+            destination_file = os.path.join(top_k_path, f'exp_{cm_id}_{best_label}_faithfulness_{args.faithfulness}_layer_{args.layer}.txt')
 
-        #     shutil.copyfile(source_file, destination_file)
+            shutil.copyfile(source_file, destination_file)
 
-        #     source_file = os.path.join(data_division_path, f'exp_{l}_{labels[0]}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
-        #     destination_file = os.path.join(data_division_path, f'exp_{cm_id}_{labels[0]}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
+            source_file = os.path.join(data_division_path, f'exp_{l}_{best_label}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
+            destination_file = os.path.join(data_division_path, f'exp_{cm_id}_{best_label}_faithfulness_{args.faithfulness}_layer_{args.layer}.pkl')
 
-        #     shutil.copyfile(source_file, destination_file)
+            shutil.copyfile(source_file, destination_file)
 
-        #     with open(destination_file, 'rb') as file:
-        #         array = pickle.load(file)
-        #         exclude_list.update(array)
+            with open(destination_file, 'rb') as file:
+                array = pickle.load(file)
+                exclude_list.update(array)
 
-        #     labels = labels[1:]
-        #     print(labels)
+            if len(exclude_list) != n_nodes:
+                best_label, iia = greedy_selection_of_cm(list(set(labels) - set([best_label, '(X+Y+Z)'])), exclude_list, args.low_rank_dimension, args.layer, args.results_path)
+                visited_labels.append(best_label)
+            else:
+                label_enc[str(cm_id)] = [best_label]
+                with open(f"label_enc_arithmetic_faithfulness_{args.faithfulness}_lrd_{args.low_rank_dimension}_layer_{args.layer}.json", "w") as f:
+                    json.dump(label_enc, f, indent=2)
+                return
 
         label = best_label
 
@@ -185,22 +198,6 @@ def run_process(all_labels, args, data_division_path, top_k_path, n_nodes=1000):
                 
                     with open(data_path, 'wb') as f:
                         pickle.dump(temp_top_k_nodes, f)
-                    
-                    if len(exclude_list) != n_nodes:
-                        temp_labels = list(set(labels) - set(visited_labels)-set(['O']))
-                        if len(temp_labels) == 0:
-                            temp_labels = ['O']
-                        best_label, iia = greedy_selection_of_cm(temp_labels, exclude_list, args.low_rank_dimension, args.layer, args.results_path)
-                        visited_labels.append(best_label)
-                        label = best_label
-
-                        print(visited_labels)
-                        print(best_label, iia)
-
-                    else:
-                        temp_labels = list(set(labels) - set(visited_labels))
-                        visited_labels = visited_labels + temp_labels
-                        print(visited_labels)
 
                     break
 
@@ -211,10 +208,33 @@ def run_process(all_labels, args, data_division_path, top_k_path, n_nodes=1000):
                 writer.writerow(['top_k', 'iia'])
                 for top_k, iia in accs:
                     writer.writerow([top_k, iia])
+
+            if label == '(X+Y+Z)':
+                visited_labels.append('(X+Y+Z)')
             
             label_enc[str(cm_id)] = visited_labels
+
+            if len(exclude_list) != n_nodes:
+                # temp_labels = list(set(labels) - set(visited_labels)-set(['O']))
+                temp_labels = list(set(labels) - set(visited_labels)-set(['(X+Y+Z)']))
+                if len(temp_labels) == 0:
+                    # temp_labels = ['O']
+                    # temp_labels = ['(X+Y+Z)']
+                    label = '(X+Y+Z)'
+                    continue
+                best_label, iia = greedy_selection_of_cm(temp_labels, exclude_list, args.low_rank_dimension, args.layer, args.results_path)
+                visited_labels.append(best_label)
+                label = best_label
+
+                print(visited_labels)
+                print(best_label, iia)
+
+            else:
+                temp_labels = list(set(labels) - set(visited_labels))
+                visited_labels = visited_labels + temp_labels
+                print(visited_labels)
     
-    with open(f"label_enc_binary_faithfulness_{args.faithfulness}_lrd_{args.low_rank_dimension}_layer_{args.layer}.json", "w") as f:
+    with open(f"label_enc_arithmetic_faithfulness_{args.faithfulness}_lrd_{args.low_rank_dimension}_layer_{args.layer}.json", "w") as f:
         json.dump(label_enc, f, indent=2)
 
 
@@ -244,81 +264,79 @@ def main():
     cliques_info_path = os.path.join(args.results_path, 'cliques_info')
     os.makedirs(cliques_info_path, exist_ok=True)
 
-    '''
     all_labels_list = [
         {
-            '1': ['(X)+Y+Z', '(X+Y+Z)'],
-            '7': ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
-            '9': ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
+            # '1': ['(X)+Y+Z', '(X+Y+Z)'],
+            # '7': ['(X)+Y+Z', '(X+Y)+Z', '(X+Y+Z)'],
+            # '9': ['(X)+Y+Z', '(X+Z)+Y', '(X+Y+Z)'],
             '13': ['(X)+Y+Z', 'X+(Y)+Z', 'X+Y+(Z)', '(X+Y)+Z', '(X+Z)+Y', 'X+(Y+Z)', '(X+Y+Z)']
         },
-        {
-            '2': ['X+(Y)+Z', '(X+Y+Z)'], 
-            '8': ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
-            '11': ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)']
-        },
-        {
-            '3': ['X+Y+(Z)', '(X+Y+Z)'],
-            '10': ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
-            '12': ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)']
-        },
-        {
-            '4': ['(X+Y)+Z', '(X+Y+Z)'],
-        },
-        {
-            '5': ['(X+Z)+Y', '(X+Y+Z)'],
-        },
-        {
-            '6': ['X+(Y+Z)', '(X+Y+Z)']
-        }
+        # {
+            # '2': ['X+(Y)+Z', '(X+Y+Z)'], 
+            # '8': ['X+(Y)+Z', '(X+Y)+Z', '(X+Y+Z)'],
+            # '11': ['X+(Y)+Z', 'X+(Y+Z)', '(X+Y+Z)']
+        # },
+        # {
+            # '3': ['X+Y+(Z)', '(X+Y+Z)'],
+            # '10': ['X+Y+(Z)', '(X+Z)+Y', '(X+Y+Z)'],
+            # '12': ['X+Y+(Z)', 'X+(Y+Z)', '(X+Y+Z)']
+        # },
+        # {
+        #     '4': ['(X+Y)+Z', '(X+Y+Z)'],
+        # },
+        # {
+            # '5': ['(X+Z)+Y', '(X+Y+Z)'],
+        # },
+        # {
+            # '6': ['X+(Y+Z)', '(X+Y+Z)']
+        # }
     ]
-    '''
 
-    all_labels_list = [
-        {
-            '1': ['OP1', 'O'],
-            '2': ['OP2', 'O'],
-            '3': ['OP3', 'O'],
-            '4': ['X', 'O'],
-            '5': ['Y', 'O'],
-            '6': ['B', 'O'],
+    # all_labels_list = [
+    #     {
+    #         '1': ['OP1', 'O'],
+    #         '2': ['OP2', 'O'],
+    #         '3': ['OP3', 'O'],
+    #         '4': ['X', 'O'],
+    #         '5': ['Y', 'O'],
+    #         '6': ['B', 'O'],
 
-            '7': ["X'", 'O'],
-            '8': ["Y'", 'O'],
-            '9': ['Q', 'O'],
-            '10': ['V', 'O'],
-            '11': ['W', 'O'],
-            '12': ["B'", 'O'],
+    #         '7': ["X'", 'O'],
+    #         '8': ["Y'", 'O'],
+    #         '9': ['Q', 'O'],
+    #         '10': ['V', 'O'],
+    #         '11': ['W', 'O'],
+    #         '12': ["B'", 'O'],
 
-            '13': ["X", "X'", "O"],
-            '14': ["OP2", "X'", "O"],
+    #         '13': ["X", "X'", "O"],
+    #         '14': ["OP2", "X'", "O"],
 
-            '15': ["Y", "Y'", "O"],
-            '16': ["OP3", "Y'", "O"],
+    #         '15': ["Y", "Y'", "O"],
+    #         '16': ["OP3", "Y'", "O"],
 
-            '17': ["OP1", "B'", "O"],
-            '18': ["B", "B'", "O"],
+    #         '17': ["OP1", "B'", "O"],
+    #         '18': ["B", "B'", "O"],
 
-            '19': ["OP1", 'V', 'O'],
-            '20': ["OP2", 'V', 'O'],
-            '21': ["X", 'V', 'O'],
+    #         '19': ["OP1", 'V', 'O'],
+    #         '20': ["OP2", 'V', 'O'],
+    #         '21': ["X", 'V', 'O'],
 
-            '22': ["OP1", 'W', 'O'],
-            '23': ["OP3", 'W', 'O'],
-            '24': ["Y", 'W', 'O'],
+    #         '22': ["OP1", 'W', 'O'],
+    #         '23': ["OP3", 'W', 'O'],
+    #         '24': ["Y", 'W', 'O'],
 
-            '25': ["OP2", 'Q', 'O'],
-            '26': ["X", 'Q', 'O'],
-            '27': ["B", 'Q', 'O'],
-            '28': ["OP3", 'Q', 'O'],
-            '29': ["Y", 'Q', 'O'],
-            '30': ["OP1", "OP2", "X", "B", "OP3", "Y", "X'", "Y'", "B'", "Q", "V", "W", "O"]
-        }
-    ]
+    #         '25': ["OP2", 'Q', 'O'],
+    #         '26': ["X", 'Q', 'O'],
+    #         '27': ["B", 'Q', 'O'],
+    #         '28': ["OP3", 'Q', 'O'],
+    #         '29': ["Y", 'Q', 'O'],
+    #         '30': ["OP1", "OP2", "X", "B", "OP3", "Y", "X'", "Y'", "B'", "Q", "V", "W", "O"]
+    #     }
+    # ]
 
     # all_faithfulness = [1.0, 0.95, 0.9, 0.8, 0.7, 0.6]
 
-    n_nodes = 64
+    n_nodes = 1000
 
     with Pool(processes=os.cpu_count()) as pool:
         pool.starmap(run_process, [(all_labels, args, data_division_path, top_k_path, n_nodes) for all_labels in all_labels_list])
