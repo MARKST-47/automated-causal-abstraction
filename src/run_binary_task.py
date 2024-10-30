@@ -75,9 +75,9 @@ def main():
     parser.add_argument('--model_path', default='mara589/binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the binary task')
     parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
-    parser.add_argument('--n_training', type=int, default=2560, help='number of training samples')
-    parser.add_argument('--batch_size', type=int, default=128, help='batch size')
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training')
+    parser.add_argument('--n_training', type=int, default=4096, help='number of training samples')
+    parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+    parser.add_argument('--epochs', type=int, default=5, help='number of epochs for training')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
@@ -135,9 +135,8 @@ def main():
     )
 
     # for low_rank_dimension in [64, 128, 256]:
-    for low_rank_dimension in [128]:
-        # for layer in range(model_config.n_layer):
-        for layer in [8]:
+    for low_rank_dimension in [256]:
+        for layer in range(model_config.n_layer):
 
             intervenable_config = IntervenableConfig({
                     "layer": layer,
