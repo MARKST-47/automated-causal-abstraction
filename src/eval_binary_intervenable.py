@@ -98,7 +98,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default='mara589/binary-gpt2', help='path to the finetuned GPT2ForSequenceClassification on the binary task')
     parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
-    parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
+    # parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
@@ -132,12 +132,6 @@ def main():
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
 
     causal_model_family = DeMorgansLawCausalModels()
-    train_id = args.train_id
-    label = causal_model_family.get_label_by_id(train_id)
-    causal_model = causal_model_family.get_model_by_id(train_id)
-    # causal_model.print_structure(fig_name=f'{label}')
-
-    print(f'Aligning with model {label}')
 
     all_comb = generate_all_combinations_de_morgan()
 
@@ -145,27 +139,38 @@ def main():
     for comb in all_comb:
         tokenized_cache[comb] = tokenizePrompt(construct_de_morgan_input(comb), tokenizer)
 
-    for low_rank_dimension in [256]:
-        # for layer in range(model_config.n_layer):
-        for layer in [8]:
+    for id in range(13):
+        train_id = id + 1
+        label = causal_model_family.get_label_by_id(train_id)
+        causal_model = causal_model_family.get_model_by_id(train_id)
 
-            subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
-            intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+        print(f'Aligning with model {label}')
 
-            intervenable.set_device(device)
-            intervenable.disable_model_gradients()
+        testing_counterfactual_data = causal_model.generate_counterfactual_dataset(
+            args.n_testing,
+            intervention_id,
+            args.batch_size,
+            device=device,
+            sampler=de_morgan_sampler,
+            inputFunction=lambda x: tokenized_cache[tuple(x.values())]
+        )
+        
+        for low_rank_dimension in [256]:
+            for layer in range(model_config.n_layer):
+            # for layer in [8]:
 
-            testing_counterfactual_data = causal_model.generate_counterfactual_dataset(
-                args.n_testing,
-                intervention_id,
-                args.batch_size,
-                device=device,
-                sampler=de_morgan_sampler,
-                inputFunction=lambda x: tokenized_cache[tuple(x.values())]
-            )
+                subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
+                try:
+                    intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+                except:
+                    print(label, layer)
+                    continue
 
-            report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
-            save_results(args.results_path, report, layer, low_rank_dimension, label, label)
+                intervenable.set_device(device)
+                intervenable.disable_model_gradients()
+
+                report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
+                save_results(args.results_path, report, layer, low_rank_dimension, label, label)
         
 if __name__ =="__main__":
     main()
