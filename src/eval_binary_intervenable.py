@@ -157,14 +157,9 @@ def main():
         
         for low_rank_dimension in [256]:
             for layer in range(model_config.n_layer):
-            # for layer in [8]:
-
+                
                 subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
-                try:
-                    intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
-                except:
-                    print(label, layer)
-                    continue
+                intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
                 intervenable.set_device(device)
                 intervenable.disable_model_gradients()
