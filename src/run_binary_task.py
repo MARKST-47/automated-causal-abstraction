@@ -78,6 +78,7 @@ def main():
     parser.add_argument('--n_training', type=int, default=4096, help='number of training samples')
     parser.add_argument('--batch_size', type=int, default=64, help='batch size')
     parser.add_argument('--epochs', type=int, default=5, help='number of epochs for training')
+    parser.add_argument('--layer', type=int, default=0, help='layer in llm where to search for an alignment')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
@@ -136,88 +137,89 @@ def main():
 
     # for low_rank_dimension in [64, 128, 256]:
     for low_rank_dimension in [256]:
-        for layer in range(model_config.n_layer):
+        # for layer in range(model_config.n_layer):
+        layer = args.layer
 
-            intervenable_config = IntervenableConfig({
-                    "layer": layer,
-                    "component": "block_output",
-                    "low_rank_dimension": low_rank_dimension,
-                    "unit":"pos",
-                    "max_number_of_units": size_intervention
-                },
-                intervention_types=LowRankRotatedSpaceIntervention,
-                model_type=type(model)
+        intervenable_config = IntervenableConfig({
+                "layer": layer,
+                "component": "block_output",
+                "low_rank_dimension": low_rank_dimension,
+                "unit":"pos",
+                "max_number_of_units": size_intervention
+            },
+            intervention_types=LowRankRotatedSpaceIntervention,
+            model_type=type(model)
+        )
+
+        intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
+        intervenable.set_device(device)
+        intervenable.disable_model_gradients()
+
+        optimizer_params = []
+        for k, v in intervenable.interventions.items():
+            optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+
+        optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
+
+        print('DAS training...')
+
+        intervenable.model.train()
+        print("intervention trainable parameters: ", intervenable.count_parameters())
+        print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
+        train_iterator = trange(0, int(args.epochs), desc="Epoch")
+
+        for epoch in train_iterator:
+            torch.cuda.empty_cache()
+            epoch_iterator = tqdm(
+                DataLoader(
+                    training_counterfactual_data,
+                    batch_size=args.batch_size,
+                    sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
+                ),
+                desc=f"Epoch: {epoch}",
+                position=0,
+                leave=True,
             )
+            
+            for step, inputs in enumerate(epoch_iterator):
+                for k, v in inputs.items():
+                    if v is not None and isinstance(v, torch.Tensor):
+                        inputs[k] = v.to(device)
+                inputs["input_ids"] = inputs["input_ids"].squeeze().long()
+                inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
+                b_s = inputs["input_ids"].shape[0]
 
-            intervenable = IntervenableModel(intervenable_config, model, use_fast=True)
-            intervenable.set_device(device)
-            intervenable.disable_model_gradients()
-
-            optimizer_params = []
-            for k, v in intervenable.interventions.items():
-                optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
-
-            optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
-
-            print('DAS training...')
-
-            intervenable.model.train()
-            print("intervention trainable parameters: ", intervenable.count_parameters())
-            print("gpt2 trainable parameters: ", count_parameters(intervenable.model))
-            train_iterator = trange(0, int(args.epochs), desc="Epoch")
-
-            for epoch in train_iterator:
-                torch.cuda.empty_cache()
-                epoch_iterator = tqdm(
-                    DataLoader(
-                        training_counterfactual_data,
-                        batch_size=args.batch_size,
-                        sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
-                    ),
-                    desc=f"Epoch: {epoch}",
-                    position=0,
-                    leave=True,
+                _, counterfactual_outputs = intervenable(
+                    {"input_ids": inputs["input_ids"]},
+                    [{"input_ids": inputs["source_input_ids"][:, 0]}],
+                    {
+                        "sources->base": list(range(size_intervention))
+                    },
+                    subspaces=[
+                        [[_ for _ in range(low_rank_dimension)]] * args.batch_size
+                    ]
                 )
-                
-                for step, inputs in enumerate(epoch_iterator):
-                    for k, v in inputs.items():
-                        if v is not None and isinstance(v, torch.Tensor):
-                            inputs[k] = v.to(device)
-                    inputs["input_ids"] = inputs["input_ids"].squeeze().long()
-                    inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
-                    b_s = inputs["input_ids"].shape[0]
 
-                    _, counterfactual_outputs = intervenable(
-                        {"input_ids": inputs["input_ids"]},
-                        [{"input_ids": inputs["source_input_ids"][:, 0]}],
-                        {
-                            "sources->base": list(range(size_intervention))
-                        },
-                        subspaces=[
-                            [[_ for _ in range(low_rank_dimension)]] * args.batch_size
-                        ]
-                    )
+                eval_metrics = compute_metrics(
+                    counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze()
+                )
 
-                    eval_metrics = compute_metrics(
-                        counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze()
-                    )
+                # loss and backprop
+                loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"])
+                loss_str = round(loss.item(), 2)
+                epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
 
-                    # loss and backprop
-                    loss = calculate_loss(counterfactual_outputs.logits, inputs["labels"])
-                    loss_str = round(loss.item(), 2)
-                    epoch_iterator.set_postfix({"loss": loss_str, "acc": eval_metrics["accuracy"]})
+                if args.gradient_accumulation_steps > 1:
+                    loss = loss / args.gradient_accumulation_steps
+                loss.backward(retain_graph=True) 
 
-                    if args.gradient_accumulation_steps > 1:
-                        loss = loss / args.gradient_accumulation_steps
-                    loss.backward(retain_graph=True) 
+                if total_step % args.gradient_accumulation_steps == 0:
+                    optimizer.step()
+                    intervenable.set_zero_grad()
+                total_step += 1
 
-                    if total_step % args.gradient_accumulation_steps == 0:
-                        optimizer.step()
-                        intervenable.set_zero_grad()
-                    total_step += 1
-
-            intervenable_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
-            intervenable.save(intervenable_path)
+        intervenable_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
+        intervenable.save(intervenable_path)
 
 if __name__ =="__main__":
     main()
