@@ -1268,7 +1268,10 @@ class IntervenableModel(BaseModel):
             )
 
         # load config
-        saving_config = IntervenableConfig.from_pretrained(load_directory, subfolder=subfolder)
+        if subfolder:
+            saving_config = IntervenableConfig.from_pretrained(load_directory, subfolder=subfolder)
+        else:
+            saving_config = IntervenableConfig.from_pretrained(load_directory)
         casted_intervention_types = []
 
         for type_str in saving_config.intervention_types:
