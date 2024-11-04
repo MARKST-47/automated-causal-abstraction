@@ -100,6 +100,7 @@ def main():
     parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
+    parser.add_argument('--layer', type=int, default=0, help='layer in llm where to search for an alignment')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
@@ -156,16 +157,21 @@ def main():
     
     # for low_rank_dimension in [256]:
     low_rank_dimension = 256
-    for layer in range(model_config.n_layer):
+    # for layer in range(model_config.n_layer):
+
+    layer = args.layer
         
-        subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
-        intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+    # subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
+    # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+    
+    intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
+    intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+    
+    intervenable.set_device(device)
+    intervenable.disable_model_gradients()
 
-        intervenable.set_device(device)
-        intervenable.disable_model_gradients()
-
-        report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
-        save_results(args.results_path, report, layer, low_rank_dimension, label, label)
+    report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
+    save_results(args.results_path, report, layer, low_rank_dimension, label, label)
         
 if __name__ =="__main__":
     main()
