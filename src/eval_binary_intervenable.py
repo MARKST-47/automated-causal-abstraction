@@ -21,8 +21,8 @@ from my_pyvene import (
 )
 
 def tokenizePrompt(prompt, tokenizer):
-        prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
-        return tokenizer.encode(prompt, return_tensors='pt')
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+    return tokenizer.encode(prompt, return_tensors='pt')
 
 def intervention_id(intervention):
     if "P" in intervention:
@@ -37,12 +37,30 @@ def compute_metrics(eval_preds, eval_labels):
     accuracy = float(correct_count) / float(total_count)
     return {"accuracy": accuracy}
 
+def batched_random_sampler(data, batch_size):
+    batch_indices = [_ for _ in range(int(len(data) / batch_size))]
+    random.shuffle(batch_indices)
+    for b_i in batch_indices:
+        for i in range(b_i * batch_size, (b_i + 1) * batch_size):
+            yield i
+
 def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, size_intervention, device):
     # eval on all data
     eval_labels = []
     eval_preds = []
     with torch.no_grad():
-        epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
+        # epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
+
+        epoch_iterator = tqdm(
+            DataLoader(
+                eval_data,
+                batch_size=batch_size,
+                sampler=batched_random_sampler(eval_data, batch_size),
+            ),
+            desc=f"Test",
+            position=0,
+            leave=True,
+        )
 
         for step, inputs in enumerate(epoch_iterator):
             for k, v in inputs.items():
