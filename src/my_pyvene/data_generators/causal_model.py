@@ -367,6 +367,8 @@ class CausalModel:
                         if var not in intervention:
                             continue
                         source = sampler()
+                        print("Base:", base)
+                        print("Source:", source)
                         sources.append(inputFunction(source))
                         source_dic[var] = source
                     for _ in range(maxlength - len(sources)):
