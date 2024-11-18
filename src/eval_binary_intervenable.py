@@ -66,6 +66,14 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             for k, v in inputs.items():
                 if v is not None and isinstance(v, torch.Tensor):
                     inputs[k] = v.to(device)
+            print(inputs["input_ids"].size())
+            print(inputs["source_input_ids"].size())
+
+            print()
+
+            print(inputs["input_ids"].unsqueeze(1).size())
+            print(inputs["source_input_ids"].unsqueeze(2).size())
+
             inputs["input_ids"] = inputs["input_ids"].squeeze().long()
             inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
 
@@ -98,7 +106,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             print()
 
             eval_metrics = compute_metrics(
-                counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze()
+                counterfactual_outputs[0].argmax(1), inputs["base_labels"].squeeze()
             )
 
             epoch_iterator.set_postfix({"acc": eval_metrics["accuracy"]})
