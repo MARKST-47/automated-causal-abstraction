@@ -66,16 +66,19 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             for k, v in inputs.items():
                 if v is not None and isinstance(v, torch.Tensor):
                     inputs[k] = v.to(device)
-            print(inputs["input_ids"].size())
-            print(inputs["source_input_ids"].size())
+            # print(inputs["input_ids"].size())
+            # print(inputs["source_input_ids"].size())
 
-            print()
+            # print()
 
-            print(inputs["input_ids"].unsqueeze(1).size())
-            print(inputs["source_input_ids"].unsqueeze(2).size())
+            # print(inputs["input_ids"].unsqueeze(1).size())
+            # print(inputs["source_input_ids"].unsqueeze(2).size())
 
-            inputs["input_ids"] = inputs["input_ids"].squeeze().long()
-            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
+            # inputs["input_ids"] = inputs["input_ids"].squeeze().long()
+            # inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
+
+            inputs["input_ids"] = inputs["input_ids"].unsqueeze(1).long()
+            inputs["source_input_ids"] = inputs["source_input_ids"].unsqueeze(2).long()
 
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
