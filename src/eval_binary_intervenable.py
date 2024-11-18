@@ -86,9 +86,12 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             print(inputs["labels"].type(torch.long).squeeze())
             print()
             print(inputs["labels"])
+            print()
 
             eval_labels += [inputs["labels"]]
             eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+
+            print(eval_preds)
 
             eval_metrics = compute_metrics(
                 counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze()
