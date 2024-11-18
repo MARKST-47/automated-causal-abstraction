@@ -161,7 +161,7 @@ def main():
         args.batch_size,
         device=device,
         sampler=de_morgan_sampler,
-        input_function=lambda x: tokenized_cache[tuple(x.values())]
+        inputFunction=lambda x: tokenized_cache[tuple(x.values())]
     )
     
     low_rank_dimension = 256
