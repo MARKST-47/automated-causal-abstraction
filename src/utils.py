@@ -56,11 +56,15 @@ def construct_arithmetic_input(data):
 
 #     return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
 
-def de_morgan_sampler(all_combinations):
+def de_morgan_sampler():
     X_values = ['True', 'False']
     Y_values = ['True', 'False']
     Op_values = ['Not', 'I']
     B_values = ['And', 'Or']
+
+    all_combinations = list(itertools.product(
+        X_values, Y_values, Op_values, Op_values, Op_values, B_values
+    ))
 
     chosen_combination = random.choice(all_combinations)
 
