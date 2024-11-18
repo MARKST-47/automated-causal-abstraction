@@ -49,18 +49,18 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
     eval_labels = []
     eval_preds = []
     with torch.no_grad():
-        # epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
+        epoch_iterator = tqdm(DataLoader(eval_data, batch_size), desc=f"Test")
 
-        epoch_iterator = tqdm(
-            DataLoader(
-                eval_data,
-                batch_size=batch_size,
-                sampler=batched_random_sampler(eval_data, batch_size),
-            ),
-            desc=f"Test",
-            position=0,
-            leave=True,
-        )
+        # epoch_iterator = tqdm(
+        #     DataLoader(
+        #         eval_data,
+        #         batch_size=batch_size,
+        #         sampler=batched_random_sampler(eval_data, batch_size),
+        #     ),
+        #     desc=f"Test",
+        #     position=0,
+        #     leave=True,
+        # )
 
         for step, inputs in enumerate(epoch_iterator):
             for k, v in inputs.items():
@@ -80,7 +80,14 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
                 ]
             )
 
-            eval_labels += [inputs["labels"].type(torch.long).squeeze()]
+            # eval_labels += [inputs["labels"].type(torch.long).squeeze()]
+            # eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
+
+            print(inputs["labels"].type(torch.long).squeeze())
+            print()
+            print(inputs["labels"])
+
+            eval_labels += [inputs["labels"]]
             eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
 
             eval_metrics = compute_metrics(
