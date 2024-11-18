@@ -20,21 +20,13 @@ from my_pyvene import (
     IntervenableModel
 )
 
-def load_tokenizer(tokenizer_path):
-    tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
-    # default to left padding
-    tokenizer.padding_side = "left"
-    # Define PAD Token = EOS Token = 50256
-    tokenizer.pad_token = tokenizer.eos_token
+def tokenizePrompt(prompt, tokenizer):
+        prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+        return tokenizer.encode(prompt, return_tensors='pt')
 
-    return tokenizer
-
-def batched_random_sampler(data, batch_size):
-    batch_indices = [_ for _ in range(int(len(data) / batch_size))]
-    random.shuffle(batch_indices)
-    for b_i in batch_indices:
-        for i in range(b_i * batch_size, (b_i + 1) * batch_size):
-            yield i
+def intervention_id(intervention):
+    if "P" in intervention:
+        return 0
 
 def compute_metrics(eval_preds, eval_labels):
     total_count = 0
@@ -44,23 +36,6 @@ def compute_metrics(eval_preds, eval_labels):
         correct_count += eval_pred == eval_label
     accuracy = float(correct_count) / float(total_count)
     return {"accuracy": accuracy}
-    
-def calculate_loss(logits, labels):
-    shift_logits = logits[..., :, :].contiguous()
-    shift_labels = labels[..., :].contiguous()
-    # Flatten the tokens
-    loss_fct = torch.nn.CrossEntropyLoss()
-    shift_logits = shift_logits.view(-1, 28) # 28 is the number of classes
-    shift_labels = shift_labels.view(-1)
-    # Enable model parallelism
-    shift_labels = shift_labels.to(shift_logits.device).long()
-    loss = loss_fct(shift_logits, shift_labels)
-
-    return loss
-
-def intervention_id(intervention):
-    if "P" in intervention:
-        return 0
 
 def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, size_intervention, device):
     # eval on all data
@@ -90,6 +65,12 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             eval_labels += [inputs["labels"].type(torch.long).squeeze()]
             eval_preds += [torch.argmax(counterfactual_outputs[0], dim=1)]
 
+            eval_metrics = compute_metrics(
+                counterfactual_outputs[0].argmax(1), inputs["labels"].squeeze()
+            )
+
+            epoch_iterator.set_postfix({"acc": eval_metrics["accuracy"]})
+
     report = classification_report(torch.cat(eval_labels).cpu(), torch.cat(eval_preds).cpu(), output_dict=True) # get the IIA
     return report
 
@@ -107,19 +88,8 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    if args.model_path == 'mara589/binary-gpt2':
-        size_intervention = 14
-        intervenable_model_path = 'mara589/intervenable-models'
-        def tokenizePrompt(prompt, tokenizer):
-            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
-            return tokenizer.encode(prompt, return_tensors='pt')
-
-    else:
-        size_intervention = 15
-        intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
-        def tokenizePrompt(prompt, tokenizer):
-            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
-            return tokenizer.encode(prompt, return_tensors='pt')
+    size_intervention = 15
+    intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -140,7 +110,6 @@ def main():
     for comb in all_comb:
         tokenized_cache[comb] = tokenizePrompt(construct_de_morgan_input(comb), tokenizer)
 
-    # for id in range(13):
     label = causal_model_family.get_label_by_id(args.train_id)
     causal_model = causal_model_family.get_model_by_id(args.train_id)
 
@@ -155,17 +124,13 @@ def main():
         inputFunction=lambda x: tokenized_cache[tuple(x.values())]
     )
     
-    # for low_rank_dimension in [256]:
     low_rank_dimension = 256
-    # for layer in range(model_config.n_layer):
-
     layer = args.layer
-        
-    # subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
-    # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
+    subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
+    intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
     
-    intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
-    intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+    # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
+    # intervenable = IntervenableModel.load(intervenable_model_path, model=model)
     
     intervenable.set_device(device)
     intervenable.disable_model_gradients()

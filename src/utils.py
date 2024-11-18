@@ -56,15 +56,11 @@ def construct_arithmetic_input(data):
 
 #     return {'X': X, 'Y': Y, 'Op1': Op1, 'Op2': Op2, 'Op3': Op3, 'B':B}
 
-def de_morgan_sampler():
+def de_morgan_sampler(all_combinations):
     X_values = ['True', 'False']
     Y_values = ['True', 'False']
     Op_values = ['Not', 'I']
     B_values = ['And', 'Or']
-
-    all_combinations = list(itertools.product(
-        X_values, Y_values, Op_values, Op_values, Op_values, B_values
-    ))
 
     chosen_combination = random.choice(all_combinations)
 
@@ -440,3 +436,36 @@ def merge_iia_graphs(n_layers, graph_size, save_graphs_path):
         # save graph
         graph_path = os.path.join(save_graphs_path, f'graph_{layer}.pt')
         torch.save(best_graphs[layer], graph_path)
+
+def binary_evaluation_visualization(results_path, save_dir_path, n_layers, causal_model_family):
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    colors = plt.cm.tab10(range(13)) 
+
+    lrd = 128
+
+    for cm_id, model_info in causal_model_family.causal_models.items():
+        label = model_info['label']
+        accuracies = []
+        for layer in range(n_layers):
+            file_path = os.path.join(results_path, f'results_{label}/{label}_report_layer_{layer}_tkn_128.json')
+
+            with open(file_path, 'r') as json_file:
+                accuracies.append(json.load(json_file)['accuracy'])
+        
+        ax.plot(range(n_layers), accuracies, marker='o', linestyle='-', 
+                linewidth=1.5, color=colors[cm_id - 1], label=label, alpha=0.8)
+        
+    ax.set_xlabel("Layer", fontsize=10)
+    ax.set_ylabel("IIA", fontsize=10)
+    ax.set_xticks(range(n_layers))
+    ax.set_xlim([-0.5, n_layers - 0.5])
+    ax.grid(axis='y', linestyle='--')
+    ax.tick_params(axis='both', which='major', labelsize=8)
+    ax.legend(fontsize=10)
+
+    save_file_name = f'binary_IIA_per_layer_{lrd}.pdf'
+    # save_file_name = f'solving_arithmetic_task_{experiment_id}.pdf'
+    file_path = os.path.join(save_dir_path, save_file_name)
+    plt.savefig(file_path, dpi=300, bbox_inches="tight")
+    plt.close()
