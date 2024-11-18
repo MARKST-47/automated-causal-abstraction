@@ -74,11 +74,11 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, s
             # print(inputs["input_ids"].unsqueeze(1).size())
             # print(inputs["source_input_ids"].unsqueeze(2).size())
 
-            # inputs["input_ids"] = inputs["input_ids"].squeeze().long()
-            # inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
+            inputs["input_ids"] = inputs["input_ids"].squeeze().long()
+            inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
 
-            inputs["input_ids"] = inputs["input_ids"].unsqueeze(1).long()
-            inputs["source_input_ids"] = inputs["source_input_ids"].unsqueeze(2).long()
+            print(inputs["input_ids"].size())
+            print(inputs["source_input_ids"].size())
 
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
@@ -164,7 +164,7 @@ def main():
         args.batch_size,
         device=device,
         sampler=de_morgan_sampler,
-        inputFunction=lambda x: tokenized_cache[tuple(x.values())]
+        input_function=lambda x: tokenized_cache[tuple(x.values())]
     )
     
     low_rank_dimension = 256
