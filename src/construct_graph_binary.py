@@ -12,7 +12,7 @@ from transformers import (AutoTokenizer,
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from my_pyvene import (
+from pyvene import (
     IntervenableModel
 )
 
@@ -21,7 +21,7 @@ def intervention_id(intervention):
         return 0
     
 def tokenizePrompt(prompt, tokenizer):
-    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
+    prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
     return tokenizer.encode(prompt, return_tensors='pt')
 
 def eval_one_point(intervenable, eval_data, low_rank_dimension, device, batch_size = 2):
@@ -41,7 +41,7 @@ def eval_one_point(intervenable, eval_data, low_rank_dimension, device, batch_si
                 {"input_ids": inputs["input_ids"]},
                 [{"input_ids": inputs["source_input_ids"][:, 0]}],
                 {
-                    "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13]
+                    "sources->base": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
                 },
                 subspaces=[
                     [[_ for _ in range(low_rank_dimension)]] * batch_size
@@ -57,10 +57,10 @@ def eval_one_point(intervenable, eval_data, low_rank_dimension, device, batch_si
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
-    parser.add_argument('--model_path', type=str, default='mara589/binary-gpt2', help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
+    parser.add_argument('--model_path', type=str, default='mara589/tasked-binary-gpt2', help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--layer', type=int, default=8, help='layer on which to evaluate')
-    parser.add_argument('--results_path', type=str, default='results/binary', help='path to the results folder')
+    parser.add_argument('--results_path', type=str, default='results/binary/tasked', help='path to the results folder')
     parser.add_argument('--low_rank_dimension', type=int, default=256, help='low rank dimension for rotation intervention')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
@@ -92,13 +92,13 @@ def main():
 
     print(f'loading intervenable model {label} on layer {args.layer}, lrd {args.low_rank_dimension}') 
 
-    intervenable_model_path = 'mara589/intervenable-models'
-    subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
+    # intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
+    # subfolder = f'{label}/intervenable_{args.low_rank_dimension}_{args.layer}'
+    # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
-    # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{args.low_rank_dimension}_{args.layer}')
-    # intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+    intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{args.low_rank_dimension}_{args.layer}')
+    intervenable = IntervenableModel.load(intervenable_model_path, model=model)
     
-    intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
     intervenable.set_device(device)
     intervenable.disable_model_gradients()
 
