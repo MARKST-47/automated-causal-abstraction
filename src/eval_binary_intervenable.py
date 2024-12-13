@@ -89,13 +89,14 @@ def main():
     parser.add_argument('--n_testing', type=int, default=256, help='number of testing samples')
     parser.add_argument('--layer', type=int, default=0, help='layer in llm where to search for an alignment')
     parser.add_argument('--batch_size', type=int, default=128, help='batch size')
+    parser.add_argument('--intervenable_model_path', type=str, help='batch size')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     size_intervention = 15
-    intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
+    # intervenable_model_path = 'mara589/binary-tasked-intervenable-models'
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -136,8 +137,8 @@ def main():
         # subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
         # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
         try:
-            intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
-            intervenable = IntervenableModel.load(intervenable_model_path, model=model)
+            # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
+            intervenable = IntervenableModel.load(args.intervenable_model_path, model=model)
             
             intervenable.set_device(device)
             intervenable.disable_model_gradients()
@@ -145,6 +146,7 @@ def main():
             report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
             save_binary_results(args.results_path, report, layer, low_rank_dimension, label)
         except:
+            print(args.intervenable_model_path)
             print('......................ERRORRRR!!!!!!!!......................')
             print(label, layer)
             continue
