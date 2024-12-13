@@ -118,6 +118,14 @@ def save_results(results_path, report, layer, exp_id, train_id, test_id):
     with open(full_path, 'w') as json_file:
         json.dump(report, json_file)
 
+def save_binary_results(results_path, report, layer, exp_id, label):
+    file_name = f'{label}_report_layer_{layer}_tkn_{exp_id}.json'
+    directory = os.path.join(results_path, label)
+    os.makedirs(directory, exist_ok=True)
+    full_path = os.path.join(directory, file_name)
+    with open(full_path, 'w') as json_file:
+        json.dump(report, json_file)
+
 def sanity_check_visualization(results_path, save_dir_path, n_layers, train_id, experiment_id, arithmetic_family):
     data = {}
     for test_id, model_info in arithmetic_family.causal_models.items():
