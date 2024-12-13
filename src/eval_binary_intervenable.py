@@ -132,24 +132,19 @@ def main():
     )
     
     low_rank_dimension = 256
-    # layer = args.layer
-    for layer in range(12):
-        # subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
-        # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
-        try:
-            # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
-            intervenable = IntervenableModel.load(args.intervenable_model_path, model=model)
-            
-            intervenable.set_device(device)
-            intervenable.disable_model_gradients()
+    layer = args.layer
+    # for layer in range(12):
+    # subfolder = f'{label}/intervenable_{low_rank_dimension}_{layer}'
+    # intervenable = IntervenableModel.load(intervenable_model_path, model=model, subfolder=subfolder)
 
-            report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
-            save_binary_results(args.results_path, report, layer, low_rank_dimension, label)
-        except:
-            print(args.intervenable_model_path)
-            print('......................ERRORRRR!!!!!!!!......................')
-            print(label, layer)
-            continue
+    # intervenable_model_path = os.path.join(args.results_path, f'intervenable_models/{label}/intervenable_{low_rank_dimension}_{layer}')
+    intervenable = IntervenableModel.load(args.intervenable_model_path, model=model)
+    
+    intervenable.set_device(device)
+    intervenable.disable_model_gradients()
+
+    report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, size_intervention, device)
+    save_binary_results(args.results_path, report, layer, low_rank_dimension, label)
         
 if __name__ =="__main__":
     main()
