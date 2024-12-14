@@ -27,15 +27,6 @@ from pyvene import (
 # from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
 # from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
 
-def load_tokenizer(tokenizer_path):
-    tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=tokenizer_path)
-    # default to left padding
-    tokenizer.padding_side = "left"
-    # Define PAD Token = EOS Token = 50256
-    tokenizer.pad_token = tokenizer.eos_token
-
-    return tokenizer
-
 def batched_random_sampler(data, batch_size):
     batch_indices = [_ for _ in range(int(len(data) / batch_size))]
     random.shuffle(batch_indices)
@@ -65,6 +56,10 @@ def calculate_loss(logits, labels):
 
     return loss
 
+def tokenizePrompt(prompt, tokenizer):
+            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
+            return tokenizer.encode(prompt, return_tensors='pt')
+
 def intervention_id(intervention):
     if "P" in intervention:
         return 0
@@ -72,8 +67,8 @@ def intervention_id(intervention):
 def main():
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
-    parser.add_argument('--model_path', default='mara589/binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the binary task')
-    parser.add_argument('--results_path', type=str, default='results/binary/', help='path to the results folder')
+    parser.add_argument('--model_path', default='mara589/tasked-binary-gpt2', type=str, help='path to the finetuned GPT2ForSequenceClassification on the binary task')
+    parser.add_argument('--results_path', type=str, default='results/binary/tasked', help='path to the results folder')
     parser.add_argument('--train_id', type=int, default=1, help='id of the model to train')
     parser.add_argument('--n_training', type=int, default=4096, help='number of training samples')
     parser.add_argument('--batch_size', type=int, default=64, help='batch size')
@@ -83,19 +78,10 @@ def main():
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
     args = parser.parse_args()
 
-    if args.model_path == 'mara589/binary-gpt2':
-        size_intervention = 14
-        def tokenizePrompt(prompt, tokenizer):
-            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))"
-            return tokenizer.encode(prompt, return_tensors='pt')
-    else:
-        size_intervention = 15
-        def tokenizePrompt(prompt, tokenizer):
-            prompt = f"{prompt['Op1']}({prompt['Op2']}({prompt['X']}) {prompt['B']} {prompt['Op3']}({prompt['Y']}))="
-            return tokenizer.encode(prompt, return_tensors='pt')
+    size_intervention = 15
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu') 
+    # device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -187,7 +173,7 @@ def main():
                         inputs[k] = v.to(device)
                 inputs["input_ids"] = inputs["input_ids"].squeeze().long()
                 inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2).long()
-                b_s = inputs["input_ids"].shape[0]
+                # b_s = inputs["input_ids"].shape[0]
 
                 _, counterfactual_outputs = intervenable(
                     {"input_ids": inputs["input_ids"]},
