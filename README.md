@@ -1,4 +1,4 @@
-# Learning a Mixture of Causal Models with Distributed Alignment Search (DAS)
+# Combining Causal Models for More Accurate Abstractions of Neural Networks
 
 Credits to the [pyvene library](https://github.com/stanfordnlp/pyvene).
 
