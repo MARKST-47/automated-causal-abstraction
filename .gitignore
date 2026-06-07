@@ -1,2 +1,6 @@
 venv/
 .venv/
+results/
+__pycache__/
+*.pt
+*.pkl
