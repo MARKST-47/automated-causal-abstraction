@@ -189,7 +189,7 @@ def main():
                     )
 
                     print(testing_counterfactual_data)
-                    return
+                    # return
 
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
                     save_results(args.results_path, report, layer, low_rank_dimension, cm_id, test_id)
