@@ -24,7 +24,6 @@ python3 src/evaluate_das.py --model_path mara589/arithmetic-gpt2 --results_path 
 
 echo "=== 7. Executing Task 4: Boolean Logic Probes ==="
 # CHANGED: Using the discovered HuggingFace path 'mara589/binary-gpt2' 
-# Local base model training step has been completely bypassed.
 python3 src/run_binary_task.py --model_path mara589/binary-gpt2 --results_path results/ --n_training 25000 --batch_size 1280 --epochs 4
 
 echo "=== All Pipeline Tasks Completed Successfully ==="
