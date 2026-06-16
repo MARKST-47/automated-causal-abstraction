@@ -1,0 +1,1 @@
+./executable_script.sh: line 15: venv/bin/activate: No such file or directory

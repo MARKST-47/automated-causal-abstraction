@@ -1,0 +1,16 @@
+Installing requirements...
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: accelerate==1.13.0 in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 1)) (1.13.0)
+Requirement already satisfied: datasets in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 2)) (2.19.2)
+Requirement already satisfied: huggingface_hub in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 3)) (0.36.2)
+Requirement already satisfied: matplotlib==3.7.5 in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 4)) (3.7.5)
+Requirement already satisfied: ml_things==0.0.1 in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 5)) (0.0.1)
+Requirement already satisfied: networkx in /opt/conda/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 6)) (3.4.2)
+Requirement already satisfied: numpy==1.24.4 in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 7)) (1.24.4)
+Requirement already satisfied: pandas in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 8)) (2.3.3)
+Requirement already satisfied: pyvene in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 9)) (0.0.6)
+Requirement already satisfied: scikit_learn==1.3.2 in /home/causalml26_team002/.local/lib/python3.11/site-packages (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 10)) (1.3.2)
+Collecting sklearn (from -r /home/causalml26_team002/Causal_Project/requirements.txt (line 11))
+  Downloading sklearn-0.0.post12.tar.gz (2.6 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'error'

@@ -1,0 +1,40 @@
+000 (165487.000.000) 2026-06-11 13:35:57 Job submitted from host: <10.143.248.60:9618?addrs=10.143.248.60-9618&alias=conduit.hpc.uni-saarland.de&noUDP&sock=schedd_1695233_69bd>
+...
+040 (165487.000.000) 2026-06-11 13:35:57 Started transferring input files
+	Transferring to host: <10.143.248.24:9618?PrivAddr=%3c10.143.250.24:9618%3fsock%3dteaching6_3427_61a4_1968%3e&PrivNet=cs-hpc-storage&addrs=10.143.248.24-9618&alias=tenos.hpc.uni-saarland.de&noUDP&sock=teaching6_3427_61a4_1968>
+...
+040 (165487.000.000) 2026-06-11 13:35:57 Finished transferring input files
+...
+001 (165487.000.000) 2026-06-11 13:36:07 Job executing on host: <10.143.248.24:9618?PrivAddr=%3c10.143.250.24:9618%3fsock%3dstartd_3095_7db5%3e&PrivNet=cs-hpc-storage&addrs=10.143.248.24-9618&alias=tenos.hpc.uni-saarland.de&noUDP&sock=startd_3095_7db5>
+	SlotName: teaching6@tenos.hpc.uni-saarland.de
+	AvailableGPUs = { GPUs_GPU_a452c067 }
+	CondorScratchDir = "/raid/condor/lib/condor/execute/dir_3577300"
+	Cpus = 7
+	Disk = 433398746
+	GPUs = 1
+	GPUs_GPU_a452c067 = [ Id = "GPU-a452c067"; Capability = 6.0; DeviceName = "Tesla P100-SXM2-16GB"; DeviceUuid = "a452c067-0d65-e291-c4ee-82d9aa851f4c"; ECCEnabled = true; NvidiaDriver = "550.163.01"; DriverVersion = 12.4; DevicePciBusId = "0000:86:00.0"; GlobalMemoryMb = 16269; MaxSupportedVersion = 12040 ]
+	Memory = 96737
+...
+040 (165487.000.000) 2026-06-11 13:41:27 Started transferring output files
+...
+040 (165487.000.000) 2026-06-11 13:41:27 Finished transferring output files
+...
+005 (165487.000.000) 2026-06-11 13:41:27 Job terminated.
+	(1) Normal termination (return value 1)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	202  -  Run Bytes Sent By Job
+	176  -  Run Bytes Received By Job
+	202  -  Total Bytes Sent By Job
+	176  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :     0.00        4         7 
+	   Disk (KB)            :    22           1 433398746 
+	   GPUs                 :     0           1         1 "GPU-a452c067"
+	   GpusMemory (MB)      :   121                       
+	   Memory (MB)          :             12288     96737 
+	   TimeExecute (s)      :     2                       
+	   TimeSlotBusy (s)     :   330                       
+...
