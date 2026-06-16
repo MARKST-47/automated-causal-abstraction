@@ -1,0 +1,19 @@
+PWD: /raid/condor/lib/condor/execute/dir_1470079
+total 64
+drwx------ 4 1620002294 22101 4096 Jun 12 16:30 .
+drwxr-xr-x 3 root       root  4096 Jun 12 16:30 ..
+-rwx------ 1 1620002294 22101   49 Jun 12 16:28 .chirp.config
+srwxr-xr-x 1 1620002294 22101    0 Jun 12 16:30 .docker_sock
+-rw-r--r-- 1 1620002294 22101    0 Jun 12 16:30 .docker_stderror
+-rw-r--r-- 1 1620002294 22101   56 Jun 12 16:30 .docker_stdout
+-rw-r--r-- 1 1620002294 22101 4203 Jun 12 16:28 .job.ad
+-rw-r--r-- 1 1620002294 22101 8644 Jun 12 16:28 .machine.ad
+-rw-r--r-- 1 1620002294 22101 8383 Jun 12 16:29 .update.ad
+-rw-r--r-- 1 1620002294 22101    0 Jun 12 16:30 _condor_stderr
+-rw-r--r-- 1 1620002294 22101   49 Jun 12 16:30 _condor_stdout
+-rwxr-xr-x 1 1620002294 22101  468 Jun 12 16:28 executable_script.sh
+drwxrwxrwt 2 1620002294 22101 4096 Jun 12 16:30 tmp
+drwxrwxrwt 3 1620002294 22101 4096 Jun 12 16:30 var
+Torch before install:
+/opt/conda/lib/python3.11/site-packages/torch/__init__.py 2.7.0+cu128
+=== 2. Activating Environment ===

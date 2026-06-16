@@ -1,0 +1,32 @@
+  WARNING: The scripts proton and proton-viewer are installed in '/home/causalml26_team002/.local/bin' which is not on PATH.
+  Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/__init__.py", line 70, in <module>
+    from sklearn.base import clone  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/base.py", line 20, in <module>
+    from sklearn.utils._metadata_requests import _MetadataRequester, _routing_enabled
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/__init__.py", line 9, in <module>
+    from sklearn.utils._chunking import gen_batches, gen_even_slices
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/_chunking.py", line 11, in <module>
+    from sklearn.utils._param_validation import Interval, validate_params
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/_param_validation.py", line 17, in <module>
+    from sklearn.utils.validation import _is_arraylike_not_scalar
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/validation.py", line 24, in <module>
+    from sklearn.utils._array_api import (
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/_array_api.py", line 23, in <module>
+    from sklearn.utils.fixes import parse_version
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/sklearn/utils/fixes.py", line 16, in <module>
+    import scipy.stats
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/stats/__init__.py", line 628, in <module>
+    from ._stats_py import *
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/stats/_stats_py.py", line 40, in <module>
+    from scipy.spatial import distance_matrix
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/spatial/__init__.py", line 124, in <module>
+    from . import distance, transform
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/spatial/transform/__init__.py", line 21, in <module>
+    from ._rigid_transform import RigidTransform
+  File "/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/spatial/transform/_rigid_transform.py", line 17, in <module>
+    from scipy.spatial.transform._rotation import _promote
+ImportError: cannot import name '_promote' from 'scipy.spatial.transform._rotation' (/home/causalml26_team002/.local/lib/python3.11/site-packages/scipy/spatial/transform/_rotation.cpython-311-x86_64-linux-gnu.so)

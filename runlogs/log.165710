@@ -1,0 +1,48 @@
+000 (165710.000.000) 2026-06-12 13:08:22 Job submitted from host: <10.143.248.60:9618?addrs=10.143.248.60-9618&alias=conduit.hpc.uni-saarland.de&noUDP&sock=schedd_1695233_69bd>
+...
+040 (165710.000.000) 2026-06-12 13:08:22 Started transferring input files
+	Transferring to host: <10.143.248.15:9618?PrivAddr=%3c10.143.250.15:9618%3fsock%3dteaching8_1718213_3ec8_1570%3e&PrivNet=cs-hpc-storage&addrs=10.143.248.15-9618&alias=thera.hpc.uni-saarland.de&noUDP&sock=teaching8_1718213_3ec8_1570>
+...
+040 (165710.000.000) 2026-06-12 13:08:22 Finished transferring input files
+...
+001 (165710.000.000) 2026-06-12 13:08:23 Job executing on host: <10.143.248.15:9618?PrivAddr=%3c10.143.250.15:9618%3fsock%3dstartd_2204_56d2%3e&PrivNet=cs-hpc-storage&addrs=10.143.248.15-9618&alias=thera.hpc.uni-saarland.de&noUDP&sock=startd_2204_56d2>
+	SlotName: teaching8@thera.hpc.uni-saarland.de
+	AvailableGPUs = { GPUs_GPU_23f27a9b }
+	CondorScratchDir = "/raid/condor/lib/condor/execute/dir_1226105"
+	Cpus = 7
+	Disk = 414954411
+	GPUs = 1
+	GPUs_GPU_23f27a9b = [ Id = "GPU-23f27a9b"; Capability = 6.0; DeviceName = "Tesla P100-SXM2-16GB"; DeviceUuid = "23f27a9b-cc04-bafe-783f-79fb204413ab"; ECCEnabled = true; NvidiaDriver = "550.163.01"; DriverVersion = 12.4; DevicePciBusId = "0000:8A:00.0"; GlobalMemoryMb = 16269; MaxSupportedVersion = 12040 ]
+	Memory = 96737
+...
+006 (165710.000.000) 2026-06-12 13:08:33 Image size of job updated: 96
+	96  -  MemoryUsage of job (MB)
+	98668  -  ResidentSetSize of job (KB)
+...
+006 (165710.000.000) 2026-06-12 13:10:38 Image size of job updated: 136
+	136  -  MemoryUsage of job (MB)
+	139652  -  ResidentSetSize of job (KB)
+...
+040 (165710.000.000) 2026-06-12 13:10:38 Started transferring output files
+...
+040 (165710.000.000) 2026-06-12 13:10:38 Finished transferring output files
+...
+005 (165710.000.000) 2026-06-12 13:10:38 Job terminated.
+	(1) Normal termination (return value 2)
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	62880  -  Run Bytes Sent By Job
+	397  -  Run Bytes Received By Job
+	62880  -  Total Bytes Sent By Job
+	397  -  Total Bytes Received By Job
+	Partitionable Resources :    Usage  Request Allocated Assigned
+	   Cpus                 :     0.00        4         7 
+	   Disk (KB)            : 30155           1 414954411 
+	   GPUs                 :     0           1         1 "GPU-23f27a9b"
+	   GpusMemory (MB)      :   117                       
+	   Memory (MB)          :   136       12288     96737 
+	   TimeExecute (s)      :   135                       
+	   TimeSlotBusy (s)     :   136                       
+...
