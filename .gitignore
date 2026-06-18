@@ -4,3 +4,9 @@ results/
 __pycache__/
 *.pt
 *.pkl
+.DS_store
+.nano.swp
+*.sub
+*.sh
+*.log
+runlogs/
