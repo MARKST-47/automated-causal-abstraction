@@ -7,7 +7,7 @@ cd /home/causalml26_team002/Baseline_Reproduction
 echo "=== 1. Setting Up Absolute Environment Isolation ==="
 export PYTHONNOUSERSITE=1
 
-# HIDING THE TOKEN: Dynamically read from an external uncommitted file
+# HIDING THE TOKEN: Dynamically read from an external uncommitted file named hf_token.txt
 if [ -f "hf_token.txt" ]; then
     export HF_TOKEN=$(cat hf_token.txt)
 else
