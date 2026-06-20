@@ -1,3 +1,0 @@
-ERROR: Could not install packages due to an OSError: [Errno 13] Permission denied: '/opt/conda/lib/python3.11/site-packages/webencodings'
-Consider using the `--user` option or check the permissions.
-
