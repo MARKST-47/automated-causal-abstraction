@@ -143,7 +143,7 @@ def main():
 
         optimizer_params = []
         for k, v in intervenable.interventions.items():
-            optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+            optimizer_params += [{"params": (v[0] if isinstance(v, (list, tuple)) else v).rotate_layer.parameters()}]
 
         optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
 
