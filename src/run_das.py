@@ -273,7 +273,8 @@ def main():
                             optimizer.step()
                             intervenable.set_zero_grad()
                             if args.boundless and hasattr(intervenable, "set_temperature"):
-                                intervenable.set_temperature(max(0.1, 1.0 - float(total_step) / float(total_training_steps)))
+                                temperature = max(0.1, 1.0 - float(total_step) / float(total_training_steps))
+                                intervenable.set_temperature(torch.tensor(temperature, device=device))
                         total_step += 1
 
                 # generate testing counterfactual data
