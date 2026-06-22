@@ -78,7 +78,6 @@ def intervention_id(intervention):
 tokenizer = None
 
 def tokenizePrompt(input):
-    # tokenizer = load_tokenizer("gpt2")
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
@@ -117,6 +116,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
 
 def main():
     global tokenizer
+
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default="mara589/arithmetic-gpt2", help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
@@ -142,7 +142,6 @@ def main():
     os.makedirs(save_dir_path, exist_ok=True)
     
     set_seed(args.seed)
-    total_step = 0
     min_class_value = 3
     
     tokenizer = load_tokenizer('gpt2')
@@ -184,6 +183,8 @@ def main():
         for low_rank_dimension in lrd_list:
             for layer in range(model_config.n_layer):
 
+                print(f'starting train_id={train_id}, dimension={low_rank_dimension}, layer={layer}')
+
                 intervenable_config = IntervenableConfig({
                         "layer": layer,
                         "component": "block_output",
@@ -209,6 +210,8 @@ def main():
 
                 optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
                 total_step = 0
+                steps_per_epoch = len(training_counterfactual_data) // args.batch_size
+                total_training_steps = args.epochs * steps_per_epoch
 
                 print('DAS training...')
 
@@ -225,6 +228,7 @@ def main():
                             batch_size=args.batch_size,
                             sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
                         ),
+                        total=steps_per_epoch,
                         desc=f"Epoch: {epoch}",
                         position=0,
                         leave=True,
@@ -237,7 +241,6 @@ def main():
                         inputs["input_ids"] = inputs["input_ids"].squeeze()
                         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
                         b_s = inputs["input_ids"].shape[0]
-                        # print(inputs["source_input_ids"])
 
                         if args.boundless:
                             subspaces = None
@@ -266,11 +269,11 @@ def main():
                             loss = loss / args.gradient_accumulation_steps
                         loss.backward()
 
-                        if total_step % args.gradient_accumulation_steps == 0:
+                        if (total_step + 1) % args.gradient_accumulation_steps == 0:
                             optimizer.step()
                             intervenable.set_zero_grad()
                             if args.boundless and hasattr(intervenable, "set_temperature"):
-                                intervenable.set_temperature(max(0.1, 1.0 - float(total_step) / float(args.epochs * len(epoch_iterator))))
+                                intervenable.set_temperature(max(0.1, 1.0 - float(total_step) / float(total_training_steps)))
                         total_step += 1
 
                 # generate testing counterfactual data
@@ -297,6 +300,8 @@ def main():
 
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, boundless=args.boundless)
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
+
+                print(f'finished train_id={train_id}, dimension={low_rank_dimension}, layer={layer}')
         
         # for experiment_id in [64, 128, 256, 768, 4608]:
         #     visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)
