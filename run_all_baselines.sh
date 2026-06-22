@@ -10,7 +10,7 @@ echo "=== 3. Upgrading pip and Installing Dependencies ==="
 pip install --upgrade pip setuptools wheel
 python -m pip install --only-binary=:all: "sentencepiece>=0.1.99"
 python -m pip install --no-deps "pyvene==0.0.7"
-pip install -q nnsight transformers torch datasets accelerate evaluate networkx scikit-learn matplotlib seaborn tqdm scikit-learn
+pip install -q nnsight "transformers==4.37.0" torch datasets accelerate evaluate networkx scikit-learn matplotlib seaborn tqdm scikit-learn
 
 # Ensure the results output directory exists
 mkdir -p results
