@@ -75,8 +75,10 @@ def intervention_id(intervention):
     if "P" in intervention:
         return 0
     
+tokenizer = None
+
 def tokenizePrompt(input):
-    tokenizer = load_tokenizer("gpt2")
+    # tokenizer = load_tokenizer("gpt2")
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
@@ -114,7 +116,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
     return report
 
 def main():
-
+    global tokenizer
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default="mara589/arithmetic-gpt2", help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
     parser.add_argument('--causal_model_type', type=str, choices=['arithmetic', 'simple'], default='arithmetic', help='choose between arithmetic or simple')
@@ -159,6 +161,7 @@ def main():
     
     for train_id, model_info in arithmetic_family.causal_models.items():
 
+        print(f'train causal model: {train_id}')
         print('generating data for DAS...')
 
         training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset(
@@ -198,13 +201,14 @@ def main():
 
                 optimizer_params = []
                 for k, v in intervenable.interventions.items():
-                    optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+                    intervention = v[0] if isinstance(v, (list, tuple)) else v
                     if args.boundless:
-                        for p in v[0].parameters():
-                            if p.requires_grad:
-                                optimizer_params += [{"params": [p]}]
+                        optimizer_params += [{"params": intervention.parameters()}]
+                    else:
+                        optimizer_params += [{"params": intervention.rotate_layer.parameters()}]
 
                 optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
+                total_step = 0
 
                 print('DAS training...')
 
@@ -233,7 +237,7 @@ def main():
                         inputs["input_ids"] = inputs["input_ids"].squeeze()
                         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
                         b_s = inputs["input_ids"].shape[0]
-                        print(inputs["source_input_ids"])
+                        # print(inputs["source_input_ids"])
 
                         if args.boundless:
                             subspaces = None
@@ -276,6 +280,7 @@ def main():
                 intervenable.save(intervenable_path)
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
+                    print(f'testing train_id={train_id}, test_id={test_id}, dimension={low_rank_dimension}, layer={layer}')
 
                     if args.causal_model_type == 'simple':
                         if test_id != train_id:
