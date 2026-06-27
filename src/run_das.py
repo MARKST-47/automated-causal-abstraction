@@ -22,6 +22,11 @@ from pyvene import (
     LowRankRotatedSpaceIntervention
 )
 
+try:
+    from pyvene import BoundlessRotatedSpaceIntervention
+except ImportError:
+    BoundlessRotatedSpaceIntervention = None
+
 # from my_pyvene.models.intervenable_base import IntervenableModel
 # from my_pyvene.models.configuration_intervenable_model import IntervenableConfig, RepresentationConfig
 # from my_pyvene.models.interventions import LowRankRotatedSpaceIntervention
@@ -70,12 +75,13 @@ def intervention_id(intervention):
     if "P" in intervention:
         return 0
     
+tokenizer = None
+
 def tokenizePrompt(input):
-    tokenizer = load_tokenizer("gpt2")
     prompt = f"{input['X']}+{input['Y']}+{input['Z']}="
     return tokenizer.encode(prompt, padding=True, return_tensors='pt')
 
-def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, min_class_value=3):
+def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, min_class_value=3, boundless=False):
     # eval on all data
     eval_labels = []
     eval_preds = []
@@ -88,13 +94,19 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
             inputs["input_ids"] = inputs["input_ids"].squeeze()
             inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
             b_s = inputs["input_ids"].shape[0]
+
+            if boundless:
+                subspaces = None
+            else:
+                subspaces = [
+                    [[_ for _ in range(low_rank_dimension)]] * b_s
+                ]
+
             _, counterfactual_outputs = intervenable(
                 {"input_ids": inputs["input_ids"]},
                 [{"input_ids": inputs["source_input_ids"][:, 0]}],
                 {"sources->base": [0,1,2,3,4,5]},
-                subspaces=[
-                    [[_ for _ in range(low_rank_dimension)]] * batch_size
-                ]
+                subspaces=subspaces
             )
 
             eval_labels += [inputs["labels"].type(torch.long).squeeze() - min_class_value]
@@ -103,6 +115,7 @@ def eval_intervenable(intervenable, eval_data, batch_size, low_rank_dimension, m
     return report
 
 def main():
+    global tokenizer
 
     parser = argparse.ArgumentParser(description="Process experiment parameters.")
     parser.add_argument('--model_path', type=str, default="mara589/arithmetic-gpt2", help='path to the finetuned GPT2ForSequenceClassification on the arithmetic task')
@@ -114,7 +127,11 @@ def main():
     parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='number of steps to accumulate before optimization step')
     parser.add_argument('--seed', type=int, default=43, help='experiment seed to be able to reproduce the results')
+    parser.add_argument('--boundless', action='store_true', help='use Boundless DAS')
     args = parser.parse_args()
+
+    if args.boundless and BoundlessRotatedSpaceIntervention is None:
+        raise ImportError("BoundlessRotatedSpaceIntervention could not be imported from pyvene.")
 
     os.makedirs(args.results_path, exist_ok=True)
 
@@ -125,7 +142,6 @@ def main():
     os.makedirs(save_dir_path, exist_ok=True)
     
     set_seed(args.seed)
-    total_step = 0
     min_class_value = 3
     
     tokenizer = load_tokenizer('gpt2')
@@ -133,6 +149,7 @@ def main():
     model_config.pad_token_id = tokenizer.pad_token_id
     model = GPT2ForSequenceClassification.from_pretrained(args.model_path, config=model_config)
     model.resize_token_embeddings(len(tokenizer))
+    hidden_dim = getattr(model_config, 'n_embd', None) or getattr(model_config, 'hidden_size', None)
 
     if args.causal_model_type == 'arithmetic':
         arithmetic_family = ArithmeticCausalModels()
@@ -143,6 +160,7 @@ def main():
     
     for train_id, model_info in arithmetic_family.causal_models.items():
 
+        print(f'train causal model: {train_id}')
         print('generating data for DAS...')
 
         training_counterfactual_data = model_info['causal_model'].generate_counterfactual_dataset(
@@ -155,8 +173,17 @@ def main():
             inputFunction=tokenizePrompt
         )
 
-        for low_rank_dimension in [64, 128, 256]:
+        if args.boundless:
+            lrd_list = [hidden_dim]
+            intervention_type = BoundlessRotatedSpaceIntervention
+        else:
+            lrd_list = [64, 128, 256]
+            intervention_type = LowRankRotatedSpaceIntervention
+
+        for low_rank_dimension in lrd_list:
             for layer in range(model_config.n_layer):
+
+                print(f'starting train_id={train_id}, dimension={low_rank_dimension}, layer={layer}')
 
                 intervenable_config = IntervenableConfig({
                         "layer": layer,
@@ -165,7 +192,7 @@ def main():
                         "unit":"pos",
                         "max_number_of_units": 6
                     },
-                    intervention_types=LowRankRotatedSpaceIntervention,
+                    intervention_types=intervention_type,
                     model_type=type(model)
                 )
 
@@ -175,9 +202,16 @@ def main():
 
                 optimizer_params = []
                 for k, v in intervenable.interventions.items():
-                    optimizer_params += [{"params": (v[0] if isinstance(v, (list, tuple)) else v).rotate_layer.parameters()}]
+                    intervention = v[0] if isinstance(v, (list, tuple)) else v
+                    if args.boundless:
+                        optimizer_params += [{"params": intervention.parameters()}]
+                    else:
+                        optimizer_params += [{"params": intervention.rotate_layer.parameters()}]
 
                 optimizer = torch.optim.Adam(optimizer_params, lr=0.01)
+                total_step = 0
+                steps_per_epoch = len(training_counterfactual_data) // args.batch_size
+                total_training_steps = args.epochs * steps_per_epoch
 
                 print('DAS training...')
 
@@ -194,6 +228,7 @@ def main():
                             batch_size=args.batch_size,
                             sampler=batched_random_sampler(training_counterfactual_data, args.batch_size),
                         ),
+                        total=steps_per_epoch,
                         desc=f"Epoch: {epoch}",
                         position=0,
                         leave=True,
@@ -206,14 +241,19 @@ def main():
                         inputs["input_ids"] = inputs["input_ids"].squeeze()
                         inputs["source_input_ids"] = inputs["source_input_ids"].squeeze(2)
                         b_s = inputs["input_ids"].shape[0]
-                        print(inputs["source_input_ids"])
+
+                        if args.boundless:
+                            subspaces = None
+                        else:
+                            subspaces = [
+                                [[_ for _ in range(low_rank_dimension)]] * b_s # taking half of the repr. and rotating it
+                            ]
+
                         _, counterfactual_outputs = intervenable(
                             {"input_ids": inputs["input_ids"]},
                             [{"input_ids": inputs["source_input_ids"][:, 0]}],
                             {"sources->base": [0,1,2,3,4,5]},
-                            subspaces=[
-                                [[_ for _ in range(low_rank_dimension)]] * args.batch_size # taking half of the repr. and rotating it
-                            ]
+                            subspaces=subspaces
                         )
 
                         eval_metrics = compute_metrics(
@@ -229,9 +269,12 @@ def main():
                             loss = loss / args.gradient_accumulation_steps
                         loss.backward()
 
-                        if total_step % args.gradient_accumulation_steps == 0:
+                        if (total_step + 1) % args.gradient_accumulation_steps == 0:
                             optimizer.step()
                             intervenable.set_zero_grad()
+                            if args.boundless and hasattr(intervenable, "set_temperature"):
+                                temperature = max(0.1, 1.0 - float(total_step) / float(total_training_steps))
+                                intervenable.set_temperature(torch.tensor(temperature, device=device))
                         total_step += 1
 
                 # generate testing counterfactual data
@@ -241,6 +284,7 @@ def main():
                 intervenable.save(intervenable_path)
 
                 for test_id, test_model_info in arithmetic_family.causal_models.items():
+                    print(f'testing train_id={train_id}, test_id={test_id}, dimension={low_rank_dimension}, layer={layer}')
 
                     if args.causal_model_type == 'simple':
                         if test_id != train_id:
@@ -255,8 +299,10 @@ def main():
                         inputFunction=tokenizePrompt
                     )
 
-                    report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
+                    report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension, boundless=args.boundless)
                     save_results(args.results_path, report, layer, low_rank_dimension, train_id, test_id)
+
+                print(f'finished train_id={train_id}, dimension={low_rank_dimension}, layer={layer}')
         
         # for experiment_id in [64, 128, 256, 768, 4608]:
         #     visualize_per_trained_model(args.results_path, save_dir_path, model_config.n_layer, train_id, experiment_id, arithmetic_family, args.causal_model_type)

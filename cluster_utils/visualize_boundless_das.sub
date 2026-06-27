@@ -1,0 +1,19 @@
+universe                = docker
+docker_image            = pytorch/pytorch:2.3.1-cuda12.1-cudnn8-devel
+executable              = /bin/bash
+arguments               = /home/causalml26_team002/Causal_Project/cluster_utils/run_visualize_boundless_das.sh
+
+output                  = results/visualize_boundless_das.$(ClusterId).$(ProcId).out
+error                   = results/visualize_boundless_das.$(ClusterId).$(ProcId).err
+log                     = results/visualize_boundless_das.$(ClusterId).log
+
+should_transfer_files   = YES
+request_gpus            = 1
+request_cpus            = 2
+request_memory          = 16G
+request_disk            = 30G
+
+requirements            = UidDomain == "cs.uni-saarland.de"
++WantGPUHomeMounted     = true
+
+queue 1
