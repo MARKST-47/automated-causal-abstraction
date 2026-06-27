@@ -148,7 +148,7 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.experiment}. Can only choose between arithmetic or simple.")
 
-    for low_rank_dimension in [256]:
+    for low_rank_dimension in [768]:
         for layer in range(model_config.n_layer):
         # for layer in [5,6,7,8,9]:
         # for layer in [10,11]:

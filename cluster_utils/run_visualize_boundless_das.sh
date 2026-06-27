@@ -46,18 +46,4 @@ export PYTHONPATH="/home/causalml26_team002/Causal_Project:${PYTHONPATH}"
 sed -i 's/tqdm.notebook/tqdm/g' src/*.py
 sed -i 's/num_workers=[1-9]/num_workers=0/g' src/*.py
 
-mkdir -p results
-
-echo "=== 4. Executing Task 1: Arithmetic Intervenable Probes ==="
-#python src/run_das.py --model_path mara589/arithmetic-gpt2 --causal_model_type arithmetic --results_path /home/causalml26_team002/Causal_Project/results/ --n_training 25000 --n_testing 256 --batch_size 256 --epochs 4 --boundless
-
-echo "=== 5. Executing Task 2: Simple/Copy Probes ==="
-#python src/run_das.py --model_path mara589/arithmetic-gpt2 --causal_model_type simple --results_path /home/causalml26_team002/Causal_Project/results/ --n_training 25000 --n_testing 256 --batch_size 256 --epochs 4 --boundless
-
-echo "=== 6. Executing Task 3: Evaluating Arithmetic Probes ==="
-python src/evaluate_das.py --model_path mara589/arithmetic-gpt2 --results_path /home/causalml26_team002/Causal_Project/results/ --n_testing 25600 --batch_size 256 --causal_model_type arithmetic
-
-echo "=== 7. Executing Task 4: Boolean Logic Probes ==="
-python src/run_binary_task.py --model_path mara589/binary-gpt2 --results_path /home/causalml26_team002/Causal_Project/results/ --n_training 25000 --batch_size 256 --epochs 4
-
-echo "=== All Containerized Tasks Completed Successfully ==="
+python src/visualize_boundless_das.py --base /home/causalml26_team002/Causal_Project 
