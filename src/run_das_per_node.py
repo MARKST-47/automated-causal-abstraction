@@ -311,7 +311,7 @@ def main():
         print(f"generating do(P) counterfactual data for causal model {train_id} ({model_info['label']})...")
         training_data = model_info['causal_model'].generate_counterfactual_dataset(
             args.n_training, intervention_id, args.batch_size,
-            device=device, sampler=arithmetic_input_sampler, inputFunction=tokenizePrompt,
+            device=device, sampler=arithmetic_input_sampler, input_function=tokenizePrompt,
         )
 
         for low_rank_dimension in low_rank_dimensions:
@@ -334,7 +334,7 @@ def main():
                         continue
                     testing_data = test_info['causal_model'].generate_counterfactual_dataset(
                         args.n_testing, intervention_id, args.batch_size,
-                        device=device, sampler=arithmetic_input_sampler, inputFunction=tokenizePrompt,
+                        device=device, sampler=arithmetic_input_sampler, input_function=tokenizePrompt,
                     )
                     report = eval_intervenable(
                         intervenable, testing_data, args.batch_size, args.granularity, head,
