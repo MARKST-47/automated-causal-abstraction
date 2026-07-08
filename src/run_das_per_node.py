@@ -200,7 +200,7 @@ def train_one_node(model, causal_family, train_id, granularity, layer, head,
 
     optimizer_params = []
     for k, v in intervenable.interventions.items():
-        optimizer_params += [{"params": v[0].rotate_layer.parameters()}]
+        optimizer_params += [{"params": v.rotate_layer.parameters()}]
     optimizer = torch.optim.Adam(optimizer_params, lr=args.lr)
 
     intervenable.model.train()
