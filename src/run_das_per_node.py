@@ -156,6 +156,9 @@ def run_intervenable(intervenable, base_ids, source_ids, granularity, head,
     base_ids = base_ids.long()
     source_ids = source_ids.long()
     batch_size = base_ids.shape[0]
+    # Intervene on every real token position; the prompt's tokenized length is whatever
+    # GPT-2 actually produces (not a hardcoded 6), so read it off the batch.
+    n_positions = base_ids.shape[1]
     unit_locations, subspaces = intervention_args(
         granularity, head, low_rank_dimension, n_positions, batch_size
     )
@@ -269,7 +272,8 @@ def main():
     parser.add_argument('--low_rank_dimensions', type=int, nargs='*', default=None,
                         help="Subspace dims to try. Default: [64,128,256] for block/mlp/attention, "
                              "[16,32,64] for head (a head is only head_dim-wide).")
-    parser.add_argument('--n_positions', type=int, default=6, help="Tokens in 'X+Y+Z=' (6).")
+    parser.add_argument('--n_positions', type=int, default=6,
+                        help="Ignored: the tokenized prompt length is auto-probed at runtime.")
     parser.add_argument('--results_path', type=str, default='results/')
     parser.add_argument('--n_training', type=int, default=2560)
     parser.add_argument('--n_testing', type=int, default=256)
@@ -290,6 +294,12 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
     model.to(device)
     n_classes = model.config.num_labels
+
+    # GPT-2 tokenizes "X+Y+Z=" to a fixed number of tokens (constant across the dataset -
+    # batching would fail on ragged lengths otherwise). Probe it instead of assuming
+    # run_das.py's hardcoded 6, which overshoots the real sequence length.
+    args.n_positions = int(tokenizePrompt({"X": 1, "Y": 1, "Z": 1}).reshape(-1).shape[0])
+    print(f"tokenized prompt length (positions): {args.n_positions}")
 
     head_dim = model_config.n_embd // model_config.n_head
     if args.low_rank_dimensions is not None:
