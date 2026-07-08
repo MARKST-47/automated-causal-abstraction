@@ -42,7 +42,7 @@ from pyvene import (
 from transformers import GPT2Tokenizer, GPT2Config, GPT2ForSequenceClassification
 
 from causal_models import ArithmeticCausalModels, SimpleSummingCausalModels
-from utils import arithmetic_input_sampler, save_results
+from utils import save_results
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -311,7 +311,8 @@ def main():
         print(f"generating do(P) counterfactual data for causal model {train_id} ({model_info['label']})...")
         training_data = model_info['causal_model'].generate_counterfactual_dataset(
             args.n_training, intervention_id, args.batch_size,
-            device=device, sampler=arithmetic_input_sampler, input_function=tokenizePrompt,
+            device=device, sampler=model_info['causal_model'].sample_input_tree_balanced,
+            input_function=tokenizePrompt,
         )
 
         for low_rank_dimension in low_rank_dimensions:
@@ -334,7 +335,8 @@ def main():
                         continue
                     testing_data = test_info['causal_model'].generate_counterfactual_dataset(
                         args.n_testing, intervention_id, args.batch_size,
-                        device=device, sampler=arithmetic_input_sampler, input_function=tokenizePrompt,
+                        device=device, sampler=test_info['causal_model'].sample_input_tree_balanced,
+                        input_function=tokenizePrompt,
                     )
                     report = eval_intervenable(
                         intervenable, testing_data, args.batch_size, args.granularity, head,
