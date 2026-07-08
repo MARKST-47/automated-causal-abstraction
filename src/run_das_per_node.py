@@ -146,6 +146,10 @@ def intervention_args(granularity, head, low_rank_dimension, n_positions, batch_
 
 def run_intervenable(intervenable, base_ids, source_ids, granularity, head,
                       low_rank_dimension, n_positions):
+    # pyvene's counterfactual dataset yields input_ids as float; the embedding lookup
+    # needs integer indices. Casting is lossless (token ids are small integers).
+    base_ids = base_ids.long()
+    source_ids = source_ids.long()
     batch_size = base_ids.shape[0]
     unit_locations, subspaces = intervention_args(
         granularity, head, low_rank_dimension, n_positions, batch_size
