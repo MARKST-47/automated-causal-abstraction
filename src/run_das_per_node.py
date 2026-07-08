@@ -136,8 +136,11 @@ def intervention_args(granularity, head, low_rank_dimension, n_positions, batch_
     subspaces = [[[_ for _ in range(low_rank_dimension)]] * batch_size]
 
     if granularity == "head":
-        loc = [[[head]] * batch_size, [list(range(n_positions))] * batch_size]
-        unit_locations = {"sources->base": (loc, loc)}
+        # unit "h.pos": value is (source_spec, base_spec); each spec is
+        # [head_locations, position_locations] - one sub-list per sub-unit of "h.pos".
+        # We intervene on one head across all positions; pyvene broadcasts over the batch.
+        side = [[[head]], list(range(n_positions))]
+        unit_locations = {"sources->base": (side, side)}
     else:
         unit_locations = {"sources->base": [_ for _ in range(n_positions)]}
 
