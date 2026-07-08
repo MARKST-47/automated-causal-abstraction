@@ -149,6 +149,15 @@ def intervention_args(granularity, head, low_rank_dimension, n_positions, batch_
     return unit_locations, subspaces
 
 
+def probe_seq_len(dataset, batch_size):
+    """Actual tokenized sequence length of the generated counterfactual data. Derived from
+    the real data (constant across the dataset) rather than a synthetic prompt: sampled
+    inputs like '3+5+7=' can tokenize to a different length than '1+1+1=' due to BPE merges,
+    and the DAS rotation must be sized to the length the model actually sees."""
+    batch = next(iter(DataLoader(dataset, batch_size=min(batch_size, len(dataset)))))
+    return int(batch["input_ids"].squeeze().shape[-1])
+
+
 def run_intervenable(intervenable, base_ids, source_ids, granularity, head,
                       low_rank_dimension, n_positions):
     # pyvene's counterfactual dataset yields input_ids as float; the embedding lookup
@@ -295,12 +304,6 @@ def main():
     model.to(device)
     n_classes = model.config.num_labels
 
-    # GPT-2 tokenizes "X+Y+Z=" to a fixed number of tokens (constant across the dataset -
-    # batching would fail on ragged lengths otherwise). Probe it instead of assuming
-    # run_das.py's hardcoded 6, which overshoots the real sequence length.
-    args.n_positions = int(tokenizePrompt({"X": 1, "Y": 1, "Z": 1}).reshape(-1).shape[0])
-    print(f"tokenized prompt length (positions): {args.n_positions}")
-
     head_dim = model_config.n_embd // model_config.n_head
     if args.low_rank_dimensions is not None:
         low_rank_dimensions = args.low_rank_dimensions
@@ -334,6 +337,9 @@ def main():
             input_function=tokenizePrompt,
         )
 
+        seq_len = probe_seq_len(training_data, args.batch_size)
+        print(f"tokenized prompt length (positions) for model {train_id}: {seq_len}")
+
         for low_rank_dimension in low_rank_dimensions:
             for layer, head in nodes_to_run(args.granularity, layers, heads):
                 tag = f"L{layer}" + (f"H{head}" if head is not None else "")
@@ -342,7 +348,7 @@ def main():
 
                 intervenable = train_one_node(
                     model, family, train_id, args.granularity, layer, head,
-                    low_rank_dimension, training_data, args, args.n_positions,
+                    low_rank_dimension, training_data, args, seq_len,
                     n_classes, min_class_value,
                 )
 
@@ -359,7 +365,7 @@ def main():
                     )
                     report = eval_intervenable(
                         intervenable, testing_data, args.batch_size, args.granularity, head,
-                        low_rank_dimension, args.n_positions, min_class_value,
+                        low_rank_dimension, seq_len, min_class_value,
                     )
                     save_results(results_path, report, layer, exp_id, train_id, test_id)
 
