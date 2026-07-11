@@ -224,7 +224,15 @@ def train_one_node(model, causal_family, train_id, granularity, layer, head,
         optimizer_params += [{"params": v.rotate_layer.parameters()}]
     optimizer = torch.optim.Adam(optimizer_params, lr=args.lr)
 
-    intervenable.model.train()
+    _opt_tensors = [p for g in optimizer.param_groups for p in g["params"]]
+    print(f"[debug] optimizer holds {len(_opt_tensors)} tensors, "
+          f"{sum(p.numel() for p in _opt_tensors)} params, "
+          f"requires_grad={[p.requires_grad for p in _opt_tensors]}")
+
+    # Freeze GPT-2 in eval mode: we train only the rotation. Leaving dropout on makes the
+    # interchange target nondeterministic, so the rotation can't converge (loss stays at
+    # ln(num_classes)). The LowRankRotatedSpaceIntervention params still train.
+    intervenable.model.eval()
     print(f"intervention trainable params: {intervenable.count_parameters()}")
 
     total_step = 0
@@ -260,6 +268,11 @@ def train_one_node(model, causal_family, train_id, granularity, layer, head,
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
             loss.backward()
+            if total_step == 0:
+                _gp = [p for g in optimizer.param_groups for p in g["params"]]
+                print("[debug] grad norms after first backward: "
+                      + str([round(p.grad.norm().item(), 6) if p.grad is not None else None
+                             for p in _gp]))
             if total_step % args.gradient_accumulation_steps == 0:
                 optimizer.step()
                 intervenable.set_zero_grad()
