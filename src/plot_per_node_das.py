@@ -101,6 +101,67 @@ def plot_head_heatmaps(records, labels, granularity, output_dir):
             print(f"Saved: {path}")
 
 
+def plot_head_3d(records, labels, granularity, output_dir, kind="surface"):
+    """3-D view of per-head DAS IIA over (layer, head, IIA), one figure per (train model, k).
+
+    kind="surface" draws a smooth surface; kind="bar" draws a 3-D bar per node. Only the
+    diagonal (train==test) is shown, matching the heatmap. Missing nodes are drawn as 0.
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  (registers the 3d projection)
+    import numpy as np
+
+    n_layers = max(r["layer"] for r in records) + 1
+    n_heads = max(r["head"] for r in records) + 1
+
+    for train_id in sorted({r["train"] for r in records}):
+        for k in sorted({r["k"] for r in records}):
+            grid = np.zeros((n_layers, n_heads))
+            present = False
+            for r in records:
+                if r["train"] == train_id and r["test"] == train_id and r["k"] == k:
+                    grid[r["layer"], r["head"]] = r["iia"]
+                    present = True
+            if not present:
+                continue
+
+            fig = plt.figure(figsize=(10, 7))
+            ax = fig.add_subplot(111, projection="3d")
+            heads_ax = np.arange(n_heads)
+            layers_ax = np.arange(n_layers)
+            HX, LY = np.meshgrid(heads_ax, layers_ax)  # HX=head, LY=layer, grid indexed [layer, head]
+
+            if kind == "bar":
+                ax.bar3d(
+                    HX.ravel(), LY.ravel(), np.zeros(grid.size),
+                    0.8, 0.8, grid.ravel(),
+                    shade=True, color=plt.cm.viridis(grid.ravel()),
+                )
+            else:
+                surf = ax.plot_surface(
+                    HX, LY, grid, cmap="viridis", vmin=0, vmax=1,
+                    edgecolor="none", antialiased=True,
+                )
+                fig.colorbar(surf, ax=ax, shrink=0.6, label="IIA")
+
+            ax.set_xlabel("Head")
+            ax.set_ylabel("Layer")
+            ax.set_zlabel("IIA")
+            ax.set_zlim(0, 1)
+            ax.set_xticks(heads_ax)
+            ax.set_yticks(layers_ax)
+            ax.set_title(f"Per-head DAS IIA (3D)  |  model {labels.get(train_id, train_id)}  |  k={k}")
+            fig.tight_layout()
+
+            path = os.path.join(
+                output_dir,
+                f"perhead_das_{safe_label(labels.get(train_id, str(train_id)))}_k{k}_3d_{kind}.png",
+            )
+            fig.savefig(path, dpi=200)
+            plt.close(fig)
+            print(f"Saved: {path}")
+
+
 def plot_layer_curves(records, labels, granularity, output_dir):
     import matplotlib.pyplot as plt
 
@@ -151,6 +212,8 @@ def main():
     parser.add_argument('--granularity', type=str, choices=['block', 'mlp', 'attention', 'head'], default='mlp')
     parser.add_argument('--output_dir', type=str, default=None,
                         help="Where to write PNGs (default: alongside the results, in .../plots).")
+    parser.add_argument('--plot3d', choices=['surface', 'bar'], default=None,
+                        help="For head granularity, also render a 3-D layer x head x IIA plot.")
     args = parser.parse_args()
 
     records = parse_records(args.results_path, args.causal_model_type, args.granularity)
@@ -164,8 +227,13 @@ def main():
     print(f"Loaded {len(records)} per-node result files for granularity '{args.granularity}'.")
     if args.granularity == "head":
         plot_head_heatmaps(records, labels, args.granularity, output_dir)
+        if args.plot3d:
+            plot_head_3d(records, labels, args.granularity, output_dir, kind=args.plot3d)
     else:
         plot_layer_curves(records, labels, args.granularity, output_dir)
+        if args.plot3d:
+            print("--plot3d only applies to --granularity head (layer x head x IIA); "
+                  "block/mlp/attention have no head axis, so use the layer curves.")
 
 
 if __name__ == "__main__":
