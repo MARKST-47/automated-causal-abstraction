@@ -10,3 +10,4 @@ __pycache__/
 *.sub
 *.log
 container_venv/
+hf_token.txt
