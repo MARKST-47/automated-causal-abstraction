@@ -305,6 +305,7 @@ def main():
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
     parser.add_argument('--seed', type=int, default=43)
     args = parser.parse_args()
+    print("CUDA available:" + str(torch.cuda.is_available()))
 
     set_seed(args.seed)
     min_class_value = 3

@@ -8,7 +8,7 @@ from pyvene import CausalModel
 from datetime import datetime
 from datasets import Dataset
 from torch.utils.data import DataLoader
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import argparse
 import pickle
 from sklearn.metrics import classification_report, accuracy_score

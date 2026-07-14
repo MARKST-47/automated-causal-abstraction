@@ -9,3 +9,4 @@ __pycache__/
 *.sh
 *.sub
 *.log
+container_venv/
