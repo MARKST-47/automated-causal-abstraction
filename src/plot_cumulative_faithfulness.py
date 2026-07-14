@@ -88,10 +88,9 @@ def _spearman(a, b):
 
 
 def plot_model(ax, label, head_layer, block_layer, how):
-    """Twin-axis: cumulative per-head (bars, left) + full-stream block IIA (line, right)."""
-    layers = sorted(set(head_layer) & set(block_layer))
-    if not layers:
-        layers = sorted(head_layer)                        # still show heads if block missing
+    """Twin-axis: cumulative per-head (bars, left) + full-stream block IIA (line, right).
+    X-axis spans every layer the heads cover; block is overlaid wherever it exists."""
+    layers = sorted(head_layer)                            # all head layers, not the intersection
     head_y = [head_layer.get(l, np.nan) for l in layers]
     block_y = [block_layer.get(l, np.nan) for l in layers]
 
@@ -122,20 +121,25 @@ def plot_model(ax, label, head_layer, block_layer, how):
 
 
 def plot_normalised(ax, label, head_layer, block_layer, how):
-    """Both series scaled to their own max, overlaid on one axis (shape comparison)."""
-    layers = sorted(set(head_layer) & set(block_layer))
-    if not layers:
+    """Both series scaled to their own max, overlaid on one axis (shape comparison).
+    Each series spans its own layers, so a partial block sweep still overlays cleanly."""
+    hl = sorted(head_layer)
+    if not hl:
         return
-    hv = np.array([head_layer[l] for l in layers], float)
-    bv = np.array([block_layer[l] for l in layers], float)
+    hv = np.array([head_layer[l] for l in hl], float)
     hn = hv / hv.max() if hv.max() > 0 else hv
-    bn = bv / bv.max() if bv.max() > 0 else bv
-    ax.plot(layers, hn, color="#4C72B0", marker="s", linewidth=2, label=f"per-head ({how}), norm.")
-    ax.plot(layers, bn, color="#C44E52", marker="o", linewidth=2, label="full-stream, norm.")
+    ax.plot(hl, hn, color="#4C72B0", marker="s", linewidth=2, label=f"per-head ({how}), norm.")
+
+    bl = sorted(block_layer)
+    if bl:
+        bv = np.array([block_layer[l] for l in bl], float)
+        bn = bv / bv.max() if bv.max() > 0 else bv
+        ax.plot(bl, bn, color="#C44E52", marker="o", linewidth=2, label="full-stream, norm.")
+
     ax.set_xlabel("Layer")
     ax.set_ylabel("normalised to own max")
     ax.set_ylim(0, 1.08)
-    ax.set_xticks(layers)
+    ax.set_xticks(hl)
     ax.set_title(label, fontsize=10)
     ax.legend(loc="upper right", fontsize=7)
 
