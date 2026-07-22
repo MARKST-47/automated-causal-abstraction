@@ -386,14 +386,14 @@ def fig6_attribution_patching(args, plt, np):
 
 
 def fig7_summary(args, plt, np, cmap, chance,
-                 old_iia, new_self_iia, simp_self_iia, arith_labels):
+                 old_self_iia, new_self_iia, simp_self_iia, arith_labels):
     ids = args.arith_models
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-    # Left: peak self-IIA comparison
+    # Left: peak self-IIA comparison (baseline bar shown for every model that was trained)
     ax = axes[0]
     x = np.arange(len(ids))
-    bar_old = [max(old_iia.values()) if i == args.baseline_model else 0.0
+    bar_old = [max(old_self_iia[i].values()) if i in old_self_iia else 0.0
                for i in ids]
     bar_new = [max(new_self_iia[cm_id].values()) for cm_id in ids]
 
@@ -412,7 +412,8 @@ def fig7_summary(args, plt, np, cmap, chance,
     # Right: number of models with meaningful IIA (above chance + 0.1 margin)
     threshold = chance + 0.1
     ax2 = axes[1]
-    old_meaningful = 1 if max(old_iia.values()) > threshold else 0
+    old_meaningful = sum(1 for iia in old_self_iia.values()
+                         if max(iia.values()) > threshold)
     new_meaningful = sum(1 for iia in new_self_iia.values()
                          if max(iia.values()) > threshold)
     simp_meaningful = sum(1 for iia in simp_self_iia.values()
@@ -482,8 +483,17 @@ def main(argv=None):
     chance = 1.0 / args.num_classes
 
     # --- Load IIA data ----------------------------------------------------- #
-    old_iia = load_baseline_iia(
-        args.old_dir, args.baseline_model, args.k_old, args.num_layers)
+    old_self_iia = {}
+    for cm_id in args.arith_models:
+        try:
+            old_self_iia[cm_id] = load_baseline_iia(
+                args.old_dir, cm_id, args.k_old, args.num_layers)
+        except FileNotFoundError:
+            print(f"  (no baseline (k={args.k_old}) results for cm_{cm_id}; skipping)")
+    if not old_self_iia:
+        raise SystemExit(f"No baseline results found under {args.old_dir}")
+    # fig1/fig2 still highlight one baseline model; use it if present, else the first found.
+    old_iia = old_self_iia.get(args.baseline_model, next(iter(old_self_iia.values())))
     new_self_iia = {
         cm_id: load_self_iia(args.new_dir, cm_id, args.k_new, args.num_layers)
         for cm_id in args.arith_models
@@ -493,8 +503,10 @@ def main(argv=None):
         for cm_id in args.simple_models
     }
 
-    print(f"\nOld baseline (k={args.k_old}, cm_{args.baseline_model} only):")
-    print(f"  IIA range: {min(old_iia.values()):.4f} - {max(old_iia.values()):.4f}")
+    print(f"\nOld baseline (k={args.k_old}, {len(old_self_iia)} model(s)):")
+    for cm_id, iia in old_self_iia.items():
+        print(f"  cm_{cm_id} ({arith_labels.get(cm_id, '')}): "
+              f"{min(iia.values()):.4f} - {max(iia.values()):.4f}")
     print(f"New Boundless DAS (k={args.k_new}, all models):")
     for cm_id, iia in new_self_iia.items():
         print(f"  cm_{cm_id} ({arith_labels.get(cm_id, '')}): "
@@ -530,7 +542,7 @@ def main(argv=None):
 
     print("\n[Figure 7] Summary")
     fig7_summary(args, plt, np, cmap, chance,
-                 old_iia, new_self_iia, simp_self_iia, arith_labels)
+                 old_self_iia, new_self_iia, simp_self_iia, arith_labels)
 
     print(f"\nDone. All outputs written to: {args.out_dir}")
 
