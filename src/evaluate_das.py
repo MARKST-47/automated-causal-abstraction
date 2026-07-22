@@ -148,7 +148,7 @@ def main():
     else:
         raise ValueError(f"Invalid causal model type: {args.experiment}. Can only choose between arithmetic or simple.")
 
-    for low_rank_dimension in [768]:
+    for low_rank_dimension in [256]:
         for layer in range(model_config.n_layer):
         # for layer in [5,6,7,8,9]:
         # for layer in [10,11]:
@@ -189,7 +189,7 @@ def main():
                     )
 
                     print(testing_counterfactual_data)
-                    return
+                    # return
 
                     report = eval_intervenable(intervenable, testing_counterfactual_data, args.batch_size, low_rank_dimension)
                     save_results(args.results_path, report, layer, low_rank_dimension, cm_id, test_id)

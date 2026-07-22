@@ -1,18 +1,13 @@
-# Environments
-.venv/
 venv/
-env/
-
-# Python caching
+.venv/
+results/
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Deep Learning / Caches
-.ipynb_checkpoints/
-.tmp/
-tmp/
-**/*.bin
-
-# Token security
+*.pt
+*.pkl
+.DS_Store
+.nano.swp
+*.sh
+*.sub
+*.log
+container_venv/
 hf_token.txt
